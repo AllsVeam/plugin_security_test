@@ -42,6 +42,8 @@ class WebSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
+                .cors()
+                .and()
                 .csrf(c -> c.disable())
                 .sessionManagement(smc -> {
                     smc.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
