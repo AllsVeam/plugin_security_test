@@ -16,9 +16,15 @@ spring:
     oauth2:
       resourceserver:
         opaquetoken:
-          introspection-uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect'
-          client-id: '320912215601386953'
-          client-secret: 'SvYVzcVMZ7cUjhlrjicgfez7nxfk66UvxsbNYtmaPzzopn4DnRa3NgDmrfmvOv8J'
+          introspection-uri: 'https://prueba-fnkj2p.us1.zitadel.cloud/oauth/v2/introspect'
+          client-id: '321900389899280615'
+          client-secret: 'dUZtoNdEAP7e4pF5y6LzgbSerm3gqET63G4uLeTcJd6vwHl4XpsLWsLhKd5emEKv'
+
+zitadel:
+  client-id: 321900389899280615
+  client-secret: dUZtoNdEAP7e4pF5y6LzgbSerm3gqET63G4uLeTcJd6vwHl4XpsLWsLhKd5emEKv
+  redirect-uri: 'http://localhost:18090/callback'
+
 
 logging:
   level:
