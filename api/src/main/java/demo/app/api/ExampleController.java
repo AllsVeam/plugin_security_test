@@ -1,5 +1,7 @@
 package demo.app.api;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -13,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,6 +95,9 @@ class ExampleController {
     public ResponseEntity<ResponseDTO<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
         ResponseDTO<UserDetailsDTO> response = new ResponseDTO<>();
 
+        System.out.println("tokenPayload = " + tokenPayload);
+
+        System.out.println(tokenPayload);
         try {
             if (!tokenPayload.containsKey("access_token")) {
                 response.setStatus(400);
@@ -116,6 +125,68 @@ class ExampleController {
             response.setMsg("Unexpected error: " + ex.getMessage());
             response.setObject(null);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<?> getToken(@RequestBody Map<String, String> payload) {
+        try {
+            String code = payload.get("code");
+            String codeVerifier = payload.get("code_verifier");
+
+            HttpClient client = HttpClient.newHttpClient();
+            String requestBody = "grant_type=authorization_code"
+                    + "&code=" + code
+                    + "&redirect_uri=http://localhost:4200/callback"
+                    + "&client_id=321191693166683125"
+                    + "&code_verifier=" + codeVerifier;
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> tokenData = mapper.readValue(response.body(), new TypeReference<>() {});
+
+            return ResponseEntity.ok(tokenData); // Retorna el JSON con access_token, id_token, refresh_token
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener el token");
+        }
+    }
+
+    @PostMapping("/userdetails")
+    public ResponseEntity<?> userDetails(@RequestBody Map<String, String> tokenMap) {
+        String token = tokenMap.get("token");
+        if (token == null || token.isEmpty()) {
+            return ResponseEntity.badRequest().body("No token provided");
+        }
+
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oidc/v1/userinfo"))
+                    .header("Authorization", "Bearer " + token)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                return ResponseEntity.status(response.statusCode()).body("Error al obtener datos del usuario");
+            }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, Object> userInfo = objectMapper.readValue(response.body(), new TypeReference<>() {});
+
+            return ResponseEntity.ok(userInfo);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
         }
     }
 
