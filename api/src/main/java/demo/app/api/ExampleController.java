@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -83,4 +84,40 @@ class ExampleController {
 
         return response.getBody();
     }
+
+    @PostMapping("/api/DTO-token")
+    public ResponseEntity<ResponseDTO<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
+        ResponseDTO<UserDetailsDTO> response = new ResponseDTO<>();
+
+        try {
+            if (!tokenPayload.containsKey("access_token")) {
+                response.setStatus(400);
+                response.setMsg("The 'access_token' field is missing from the payload.");
+                response.setObject(null);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+            UserDetailsDTO userDetails = TokenMapper.mapTokenToUserDetails(tokenPayload);
+
+            if (userDetails == null || userDetails.getUserId() == null) {
+                response.setStatus(401);
+                response.setMsg("Invalid or unrecognized token");
+                response.setObject(null);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            response.setStatus(200);
+            response.setMsg("Full user");
+            response.setObject(userDetails);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception ex) {
+            response.setStatus(500);
+            response.setMsg("Unexpected error: " + ex.getMessage());
+            response.setObject(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+
 }

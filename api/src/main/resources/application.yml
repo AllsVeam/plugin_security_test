@@ -19,7 +19,6 @@ spring:
           introspection-uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect'
           client-id: '320912215601386953'
           client-secret: 'SvYVzcVMZ7cUjhlrjicgfez7nxfk66UvxsbNYtmaPzzopn4DnRa3NgDmrfmvOv8J'
-
 logging:
   level:
     root: info
