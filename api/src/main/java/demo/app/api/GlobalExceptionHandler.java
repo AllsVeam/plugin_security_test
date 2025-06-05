@@ -1,5 +1,6 @@
 package demo.app.api;
 
+import demo.app.apiResponse.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,8 +18,8 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleResponseStatusException(ResponseStatusException ex) {
-        ResponseDTO<Object> response = new ResponseDTO<>();
+    public ResponseEntity<ApiResponse<Object>> handleResponseStatusException(ResponseStatusException ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
         response.setStatus(ex.getStatusCode().value());
         response.setMsg(ex.getReason());
         response.setObject(null);
@@ -26,14 +27,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        ResponseDTO<Object> response = new ResponseDTO<>();
+        ApiResponse<Object> response = new ApiResponse<>();
         response.setStatus(HttpStatus.UNPROCESSABLE_ENTITY.value());
         response.setMsg("Error de validación: " + errors.toString());
         response.setObject(null);
@@ -41,8 +42,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleNotFound(NoHandlerFoundException ex) {
-        ResponseDTO<Object> response = new ResponseDTO<>();
+    public ResponseEntity<ApiResponse<Object>> handleNotFound(NoHandlerFoundException ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
         response.setStatus(HttpStatus.NOT_FOUND.value());
         response.setMsg("Recurso no encontrado: " + ex.getRequestURL());
         response.setObject(null);
@@ -50,8 +51,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ResponseDTO<Object>> handleAccessDenied(AccessDeniedException ex) {
-        ResponseDTO<Object> response = new ResponseDTO<>();
+    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setMsg("Acceso denegado");
         response.setObject(null);
@@ -59,8 +60,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ResponseDTO<Object>> handleGeneralException(Exception ex) {
-        ResponseDTO<Object> response = new ResponseDTO<>();
+    public ResponseEntity<ApiResponse<Object>> handleGeneralException(Exception ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
         response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         response.setMsg("Error interno del servidor: " + ex.getMessage());
         response.setObject(null);

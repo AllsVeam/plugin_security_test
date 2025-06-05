@@ -1,7 +1,8 @@
-package demo.app.api;
+package demo.app.api.dto;
 
 
 import java.util.List;
+
 import lombok.Data;
 
 @Data

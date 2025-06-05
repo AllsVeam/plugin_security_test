@@ -1,10 +1,12 @@
-package demo.app.api;
+package demo.app.api.service;
 import java.util.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URI;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import demo.app.api.dto.RoleDTO;
+import demo.app.api.dto.UserDetailsDTO;
 
 
 public class TokenMapper {

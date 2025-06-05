@@ -1,4 +1,4 @@
-package demo.app.api;
+package demo.app.api.dto;
 import lombok.Data;
 
 @Data

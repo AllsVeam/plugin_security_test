@@ -1,7 +1,10 @@
-package demo.app.api;
+package demo.app.api.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import demo.app.apiResponse.ApiResponse;
+import demo.app.api.service.TokenMapper;
+import demo.app.api.dto.UserDetailsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -92,8 +95,8 @@ class ExampleController {
     }
 
     @PostMapping("/api/DTO-token")
-    public ResponseEntity<ResponseDTO<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
-        ResponseDTO<UserDetailsDTO> response = new ResponseDTO<>();
+    public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
+        ApiResponse<UserDetailsDTO> response = new ApiResponse<>();
 
         System.out.println("tokenPayload = " + tokenPayload);
 
