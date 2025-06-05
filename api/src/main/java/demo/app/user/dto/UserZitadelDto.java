@@ -1,17 +1,20 @@
 package demo.app.user.dto;
 
 import lombok.Data;
+import lombok.ToString;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data
+@ToString
 public class UserZitadelDto {
     private String id;
-    private UserZitadelDetailDto userZitadelDetailDto;
+    private DetailsDto details;
     private String state;
     private String userName;
-    private String[] loginNames;
+    private List<String> loginNames;
     private String preferredLoginName;
+    private MachineDto machine;
     private HumanZitadelDto human;
-
 }

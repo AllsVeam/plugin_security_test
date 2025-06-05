@@ -1,6 +1,7 @@
 package demo.app.user.service;
 
 import demo.app.apiResponse.ApiResponse;
+import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UserDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -85,7 +86,7 @@ public class ZitadelServiceImp implements ZitadelService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        try {
+        try {/*
             ResponseEntity<String> response = restTemplate.exchange(
                     API_URL,
                     HttpMethod.POST,
@@ -93,6 +94,20 @@ public class ZitadelServiceImp implements ZitadelService {
                     String.class
             );
             return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", response.getBody()));
+            */
+
+            ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
+                    API_URL,
+                    HttpMethod.POST,
+                    entity,
+                    ResponseZitadelDTO.class
+            );
+
+            System.out.println(response.getBody());
+
+            ResponseZitadelDTO responseBody = response.getBody();
+            return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", responseBody));
+
         } catch (Exception e) {
             return ResponseEntity.ok(new ApiResponse<>(400, "Error al obtener el usuario", null));
         }

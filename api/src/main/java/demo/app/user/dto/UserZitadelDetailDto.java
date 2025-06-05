@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 @Data
 public class UserZitadelDetailDto {
     private String sequence;
-    private OffsetDateTime creationDate;
-    private OffsetDateTime changeDate;
+    private String creationDate;
+    private String changeDate;
     private String resourceOwner;
 }
