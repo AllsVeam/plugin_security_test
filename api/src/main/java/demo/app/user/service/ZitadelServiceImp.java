@@ -4,9 +4,14 @@ import demo.app.apiResponse.ApiResponse;
 import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UserDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,16 +20,64 @@ import java.util.Map;
 @Service
 public class ZitadelServiceImp implements ZitadelService {
 
+    @Value("${zitadel.client-id}")
+    private String clientId;
+
+    @Value("${zitadel.client-secret}")
+    private String clientSecret;
+
+    @Value("${zitadel.scope}")
+    private String scope;
+
+    @Value("${zitadel.token-url}")
+    private String tokenUrl;
+
+    @Value("${zitadel.api-url}")
+    private String apiUrl;
+
     private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
 
+    private String obtenerToken() {
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        // —————————————————————————————
+        // En lugar de enviar client_id/secret en el body:
+        headers.setBasicAuth(clientId, clientSecret);
+        // —————————————————————————————
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "client_credentials");
+        body.add("scope", scope);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<Map> response =
+                    restTemplate.postForEntity(tokenUrl, request, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody()!=null) {
+                return (String) response.getBody().get("access_token");
+            } else {
+                log.error("Token request fallo: HTTP {} – body={}",
+                        response.getStatusCode(), response.getBody());
+                throw new RuntimeException("No se pudo obtener token de Zitadel");
+            }
+        } catch (HttpClientErrorException e) {
+            log.error("Error pidiendo token: HTTP {} – {}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            throw e;
+        }
+    }
     @Override
     public ResponseEntity<ApiResponse<UserDTO>> createUser(UserDTO userDTO) {
         try {
             // Preparar headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth("WqBTjb1zFWa_KDptOVoHneXpbnEe6VO8vsKashypwtjiNiS-wV2HzDe6pehXd4d5T7YmuD0");
+            headers.setBearerAuth(obtenerToken());
 
             // Construir body para ZITADEL
             Map<String, Object> payload = new HashMap<>();
@@ -74,6 +127,7 @@ public class ZitadelServiceImp implements ZitadelService {
             }
 
         } catch (Exception e) {
+            log.error("Error creando usuario en Zitadel", e);
             return ResponseEntity.status(400).body(new ApiResponse<>(400, "Error al crear el usuario", null));
         }
     }
@@ -82,7 +136,9 @@ public class ZitadelServiceImp implements ZitadelService {
     public ResponseEntity<ApiResponse<Object>> getUser() {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setBearerAuth(obtenerToken());
+        log.info("Usando client_id: {}", clientId);
+        log.info("Scope: {}", scope);
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -97,8 +153,8 @@ public class ZitadelServiceImp implements ZitadelService {
             */
 
             ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
-                    API_URL,
-                    HttpMethod.POST,
+                    apiUrl,
+                    HttpMethod.GET,
                     entity,
                     ResponseZitadelDTO.class
             );

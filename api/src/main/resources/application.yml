@@ -18,7 +18,7 @@ spring:
         opaquetoken:
           introspection-uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect'
           client-id: '320912215601386953'
-          client-secret: 'SvYVzcVMZ7cUjhlrjicgfez7nxfk66UvxsbNYtmaPzzopn4DnRa3NgDmrfmvOv8J'
+          client-secret: 'Z1rOufKIH57cJrBi6Fi43gqVQ1aGzwhueHIkUa7GGPY38XIqCsHaGmOu6uMftqcd'
 logging:
   level:
     root: info
@@ -27,3 +27,9 @@ logging:
       springframework:
         web: info
         security: debug
+zitadel:
+  client-id: 'Asistente'
+  client-secret: '7jemyTVJVVTYj2cVTSf5GhEpAwpbiss4SkNSJgSOm5da73QMwfUAMJOcnylUXKGh'
+  token-url: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token'
+  api-url: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users'
+  scope: 'urn:zitadel:iam:org:project:id:320736469398325498:role:project.owner'
