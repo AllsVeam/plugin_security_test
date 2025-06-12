@@ -15,15 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType; // para Spring
-
-
-
-import java.util.HashMap;
+import org.springframework.http.MediaType;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -31,32 +27,23 @@ import java.util.Map;
 public class ZitadelServiceImp implements ZitadelService {
 
 
-    @Value("${zitadel.token-url}")
+    @Value("${zitadel.urltoken}")
     private String tokenUrl;
 
-    @Value("${zitadel.api-url}")
-    private String apiUrl;
 
     @Value("${zitadel.urluser}")
     private String urlUser;
 
-    //
 
     @Value("${zitadel.scope}")
     private String scopetoken;
 
-
-    private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
-    private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
 
     @Value("${zitadel.client_id}")
     private String clientId;
 
     @Value("${zitadel.client_secret}")
     private String client_secret;
-
-    @Value("${zitadel2.scope}")
-    private String scope;
 
 
 
@@ -99,9 +86,6 @@ public class ZitadelServiceImp implements ZitadelService {
             throw new RuntimeException("Error inesperado al obtener el token", e);
         }
     }
-
-    private final OkHttpClient client = new OkHttpClient();
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
 
     @Override
@@ -187,39 +171,40 @@ public class ZitadelServiceImp implements ZitadelService {
 
     @Override
     public ResponseEntity<ApiResponse<Object>> getUser() {
-        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
+        String token=obtenerToken();
+        // Token obtenido previamente vía client_credentials
+        String bearerToken = "Bearer "+token;
+
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(obtenerToken());
-        log.info("Usando client_id: {}", clientId);
-        log.info("Scope: {}", scope);
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
+        headers.setBearerAuth(token); // sin "Bearer ", Spring lo agrega
+        HttpEntity<String> request = new HttpEntity<>("{}", headers);
 
-        try {/*
-            ResponseEntity<String> response = restTemplate.exchange(
-                    API_URL,
+        RestTemplate restTemplate = new RestTemplate();
+
+        try {
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url,
                     HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-            return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", response.getBody()));
-            */
-
-            ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
-                    apiUrl,
-                    HttpMethod.GET,
-                    entity,
-                    ResponseZitadelDTO.class
+                    request,
+                    Object.class
             );
 
-            System.out.println(response.getBody());
+            ApiResponse<Object> apiResponse = new ApiResponse<>();
+            apiResponse.setMessage("Usuarios obtenidos correctamente");
+            apiResponse.setSuccess(true);
+            apiResponse.setData(response.getBody());
+            System.out.println(response);
+            return ResponseEntity.ok(apiResponse);
 
-            ResponseZitadelDTO responseBody = response.getBody();
-            return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", responseBody));
-
-        } catch (Exception e) {
-            return ResponseEntity.ok(new ApiResponse<>(400, "Error al obtener el usuario", null));
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            ApiResponse<Object> errorResponse = new ApiResponse<>();
+            errorResponse.setMessage("Error al obtener usuarios: " + e.getMessage());
+            errorResponse.setSuccess(false);
+            return ResponseEntity.status(e.getStatusCode()).body(errorResponse);
         }
     }
+
 
 }

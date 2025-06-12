@@ -38,7 +38,7 @@ public class UserController {
     }
 
 
-    @GetMapping("/")
+    @GetMapping("/getuser")
     public ResponseEntity<ApiResponse<Object>> getUser() {
         return zitadelService.getUser();
     }
@@ -47,5 +47,6 @@ public class UserController {
     public String obtenerToken() {
         return zitadelService.obtenerToken();
     }
+
 
 }
