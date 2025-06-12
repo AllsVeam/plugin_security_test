@@ -28,8 +28,11 @@ logging:
         web: info
         security: debug
 zitadel:
-  client-id: 'Asistente'
-  client-secret: '7jemyTVJVVTYj2cVTSf5GhEpAwpbiss4SkNSJgSOm5da73QMwfUAMJOcnylUXKGh'
-  token-url: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token'
-  api-url: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users'
+  client_id: "Asistente"
+  client_secret: "klug5LQYdGAHJuGPa5wFfQMN2d0fvjyAo6Q4hQJQctgcXS4q50qqolWHb54eUE1R"
+  scope: "openid profile email urn:zitadel:iam:org:project:id:zitadel:aud"
+  urltoken: "https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token"
+  urluser: "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/human"
+
+zitadel2:
   scope: 'urn:zitadel:iam:org:project:id:320736469398325498:role:project.owner'

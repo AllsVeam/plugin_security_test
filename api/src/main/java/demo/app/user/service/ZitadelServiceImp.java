@@ -1,9 +1,14 @@
 package demo.app.user.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UserDTO;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -11,23 +16,20 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType; // para Spring
+
 
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
 @Service
 public class ZitadelServiceImp implements ZitadelService {
 
-    @Value("${zitadel.client-id}")
-    private String clientId;
-
-    @Value("${zitadel.client-secret}")
-    private String clientSecret;
-
-    @Value("${zitadel.scope}")
-    private String scope;
 
     @Value("${zitadel.token-url}")
     private String tokenUrl;
@@ -35,102 +37,153 @@ public class ZitadelServiceImp implements ZitadelService {
     @Value("${zitadel.api-url}")
     private String apiUrl;
 
+    @Value("${zitadel.urluser}")
+    private String urlUser;
+
+    //
+
+    @Value("${zitadel.scope}")
+    private String scopetoken;
+
+
     private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
 
-    private String obtenerToken() {
-        RestTemplate restTemplate = new RestTemplate();
+    @Value("${zitadel.client_id}")
+    private String clientId;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        // —————————————————————————————
-        // En lugar de enviar client_id/secret en el body:
-        headers.setBasicAuth(clientId, clientSecret);
-        // —————————————————————————————
+    @Value("${zitadel.client_secret}")
+    private String client_secret;
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("grant_type", "client_credentials");
-        body.add("scope", scope);
+    @Value("${zitadel2.scope}")
+    private String scope;
 
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
+
+
+
+
+    @Override
+    public String obtenerToken() {
         try {
-            ResponseEntity<Map> response =
-                    restTemplate.postForEntity(tokenUrl, request, Map.class);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody()!=null) {
-                return (String) response.getBody().get("access_token");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "client_credentials");
+            body.add("client_id", clientId);
+            body.add("client_secret", client_secret);
+            body.add("scope", scopetoken);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+
+            RestTemplate restTemplate = new RestTemplate();
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                Map<String, Object> responseBody = response.getBody();
+                if (responseBody != null && responseBody.containsKey("access_token")) {
+                    return responseBody.get("access_token").toString();
+                } else {
+                    throw new RuntimeException("Token no encontrado en la respuesta");
+                }
             } else {
-                log.error("Token request fallo: HTTP {} – body={}",
-                        response.getStatusCode(), response.getBody());
-                throw new RuntimeException("No se pudo obtener token de Zitadel");
+                throw new RuntimeException("Error al obtener el token: " + response.getStatusCode());
             }
         } catch (HttpClientErrorException e) {
-            log.error("Error pidiendo token: HTTP {} – {}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
-            throw e;
+            System.err.println("Respuesta de error de Zitadel: " + e.getResponseBodyAsString());
+            throw new RuntimeException("Error al obtener el token de Zitadel", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Error inesperado al obtener el token", e);
         }
     }
+
+    private final OkHttpClient client = new OkHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+
     @Override
-    public ResponseEntity<ApiResponse<UserDTO>> createUser(UserDTO userDTO) {
+    public void createUser(UserDTO dto) {
         try {
-            // Preparar headers
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(obtenerToken());
+            String token = obtenerToken();
 
-            // Construir body para ZITADEL
-            Map<String, Object> payload = new HashMap<>();
-            Map<String, Object> user = new HashMap<>();
-            Map<String, Object> human = new HashMap<>();
+            OkHttpClient client = new OkHttpClient();
 
-            Map<String, Object> email = Map.of(
-                    "email", userDTO.getEmail(),
-                    "is_email_verified", false
+            Map<String, Object> profile = Map.of(
+                    "firstName", dto.getGivenName(),
+                    "lastName", dto.getFamilyName(),
+                    "displayName", dto.getDisplayName(),
+                    "nickName", dto.getNickName(),
+                    "preferredLanguage", dto.getPreferredLanguage(),
+                    "gender", dto.getGender()
             );
 
-            Map<String, Object> name = Map.of(
-                    "given_name", userDTO.getGivenName(),
-                    "family_name", userDTO.getFamilyName()
+            Map<String, Object> email = Map.of(
+                    "email", dto.getEmail(),
+                    "isEmailVerified", false
+            );
+
+            Map<String, Object> phone = Map.of(
+                    "phone", dto.getPhone(),
+                    "isPhoneVerified", true
             );
 
             Map<String, Object> password = Map.of(
-                    "password", userDTO.getPassword()
+                    "password", dto.getPassword(),
+                    "changeRequired", true
             );
 
-            human.put("email", email);
-            human.put("name", name);
-            human.put("password", password);
-
-            user.put("username", userDTO.getUsername());
-            user.put("human", human);
-
-            payload.put("user", user);
-
-            // Crear request
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
-
-            // Enviar POST a ZITADEL
-            RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users",
-                    request,
-                    String.class
+            Map<String, Object> initialLogin = Map.of(
+                    "returnToUrl", "https://example.com/email/verify"
             );
 
-            System.out.println(restTemplate);
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("userName", dto.getUsername());
+            payload.put("organizationId", dto.getOrganizationId());
+            payload.put("profile", profile);
+            payload.put("email", email);
+            payload.put("phone", phone);
+            payload.put("password", password);
+            payload.put("initialLogin", initialLogin);
 
-            if (response.getStatusCode().is2xxSuccessful()) {
-                return ResponseEntity.ok(new ApiResponse<>(200, "Usuario creado correctamente en ZITADEL", userDTO));
-            } else {
-                throw new RuntimeException("Respuesta de ZITADEL no exitosa: " + response.getStatusCode());
+            ObjectMapper mapper = new ObjectMapper();
+            String json = mapper.writeValueAsString(payload);
+
+            System.out.println("Payload generado:\n" + json);
+
+            RequestBody body = RequestBody.create(
+                    json,
+                    okhttp3.MediaType.parse("application/json")
+            );
+
+            Request request = new Request.Builder()
+                    .url(urlUser)
+                    .post(body)
+                    .addHeader("Authorization", "Bearer " + token)
+                    .addHeader("Content-Type", "application/json")
+                    .build();
+
+            Response response = client.newCall(request).execute();
+
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
+                System.err.println("Error al crear usuario: " + responseBody);
+                throw new RuntimeException("Error al crear usuario en Zitadel: " + responseBody);
             }
 
+            System.out.println("Usuario creado correctamente.");
+
         } catch (Exception e) {
-            log.error("Error creando usuario en Zitadel", e);
-            return ResponseEntity.status(400).body(new ApiResponse<>(400, "Error al crear el usuario", null));
+            throw new RuntimeException("Error al crear usuario en Zitadel", e);
         }
     }
+
+
+
+
+
 
     @Override
     public ResponseEntity<ApiResponse<Object>> getUser() {
