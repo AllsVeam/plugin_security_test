@@ -18,7 +18,7 @@ spring:
         opaquetoken:
           introspection-uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect'
           client-id: '320912215601386953'
-          client-secret: 'SvYVzcVMZ7cUjhlrjicgfez7nxfk66UvxsbNYtmaPzzopn4DnRa3NgDmrfmvOv8J'
+          client-secret: 'Oi6WQvgYw5XwfACyH3DQWi0jkF47mzS7ZUFy83uODqrQEDAK0wXr41vSDxPT0OTu'
 logging:
   level:
     root: info

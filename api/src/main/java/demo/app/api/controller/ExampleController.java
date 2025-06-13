@@ -98,9 +98,6 @@ class ExampleController {
     public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
         ApiResponse<UserDetailsDTO> response = new ApiResponse<>();
 
-        System.out.println("tokenPayload = " + tokenPayload);
-
-        System.out.println(tokenPayload);
         try {
             if (!tokenPayload.containsKey("access_token")) {
                 response.setStatus(400);
@@ -110,7 +107,7 @@ class ExampleController {
             }
 
             UserDetailsDTO userDetails = TokenMapper.mapTokenToUserDetails(tokenPayload);
-
+            System.out.println("userDetails = " + userDetails);
             if (userDetails == null || userDetails.getUserId() == null) {
                 response.setStatus(401);
                 response.setMsg("Invalid or unrecognized token");
@@ -120,6 +117,7 @@ class ExampleController {
 
             response.setStatus(200);
             response.setMsg("Full user");
+            System.out.println("tokenPayload = " + response);
             response.setObject(userDetails);
             return ResponseEntity.ok(response);
 
@@ -131,7 +129,7 @@ class ExampleController {
         }
     }
 
-    @PostMapping("/token")
+    @PostMapping("/token2")
     public ResponseEntity<?> getToken(@RequestBody Map<String, String> payload) {
         try {
             String code = payload.get("code");
@@ -142,6 +140,7 @@ class ExampleController {
                     + "&code=" + code
                     + "&redirect_uri=http://localhost:4200/callback"
                     + "&client_id=321191693166683125"
+                    + "&grant_type=refresh_token expires_in_refresh_token"
                     + "&code_verifier=" + codeVerifier;
 
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()

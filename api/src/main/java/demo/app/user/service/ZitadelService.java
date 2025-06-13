@@ -8,4 +8,7 @@ import org.springframework.http.ResponseEntity;
 public interface ZitadelService {
     public ResponseEntity<ApiResponse<UserDTO>> createUser(UserDTO userDTO);
     public ResponseEntity<ApiResponse<Object>> getUser();
+    public ResponseEntity<ApiResponse<Object>> deleteUser(Long userId);
+    ResponseEntity<ApiResponse<Object>> desactivate(Long userId);
+    ResponseEntity<ApiResponse<Object>> reactivate(Long userId);
 }

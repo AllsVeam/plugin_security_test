@@ -3,7 +3,6 @@ package demo.app.user.dto;
 import lombok.Data;
 import lombok.ToString;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @Data
