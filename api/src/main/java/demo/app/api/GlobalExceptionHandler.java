@@ -1,6 +1,7 @@
 package demo.app.api;
 
 import demo.app.apiResponse.ApiResponse;
+import java.util.logging.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,9 +14,12 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger = Logger.getLogger(GlobalExceptionHandler.class.getName());
+
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiResponse<Object>> handleResponseStatusException(ResponseStatusException ex) {
@@ -67,4 +71,11 @@ public class GlobalExceptionHandler {
         response.setObject(null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
+
+
+    @ExceptionHandler(NoRolesAssignedException.class)
+    public ResponseEntity<String> handleNoRoleAssigned(NoRolesAssignedException ex) {
+        return new ResponseEntity<>("El usuario no tiene rol asignado", HttpStatus.FORBIDDEN);
+    }
+
 }

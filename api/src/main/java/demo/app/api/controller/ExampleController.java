@@ -2,6 +2,8 @@ package demo.app.api.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import demo.app.api.NoRolesAssignedException;
+import demo.app.api.service.TokenIntrospectionService;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.api.service.TokenMapper;
 import demo.app.api.dto.UserDetailsDTO;
@@ -18,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
-
+import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
@@ -98,9 +100,6 @@ class ExampleController {
     public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
         ApiResponse<UserDetailsDTO> response = new ApiResponse<>();
 
-        System.out.println("tokenPayload = " + tokenPayload);
-
-        System.out.println(tokenPayload);
         try {
             if (!tokenPayload.containsKey("access_token")) {
                 response.setStatus(400);
@@ -111,17 +110,17 @@ class ExampleController {
 
             UserDetailsDTO userDetails = TokenMapper.mapTokenToUserDetails(tokenPayload);
 
-            if (userDetails == null || userDetails.getUserId() == null) {
-                response.setStatus(401);
-                response.setMsg("Invalid or unrecognized token");
-                response.setObject(null);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-            }
-
             response.setStatus(200);
             response.setMsg("Full user");
             response.setObject(userDetails);
+            System.out.println("DTO  = " + response);
             return ResponseEntity.ok(response);
+
+        } catch (NoRolesAssignedException e) {
+            response.setStatus(403);
+            response.setMsg(e.getMessage());
+            response.setObject(null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 
         } catch (Exception ex) {
             response.setStatus(500);
@@ -130,6 +129,7 @@ class ExampleController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
 
     @PostMapping("/token")
     public ResponseEntity<?> getToken(@RequestBody Map<String, String> payload) {
@@ -155,6 +155,7 @@ class ExampleController {
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> tokenData = mapper.readValue(response.body(), new TypeReference<>() {});
 
+            System.out.println("data= " + tokenData);
             return ResponseEntity.ok(tokenData); // Retorna el JSON con access_token, id_token, refresh_token
         } catch (Exception e) {
             e.printStackTrace();
@@ -191,6 +192,14 @@ class ExampleController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
         }
+    }
+
+    private TokenIntrospectionService tokenIntrospectionService;
+
+    @GetMapping("/check")
+    public boolean isSessionValid(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        return tokenIntrospectionService.isTokenActive(token);
     }
 
 
