@@ -1,9 +1,12 @@
 package demo.app.user.service;
 
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
-import demo.app.user.dto.ResponseZitadelDTO;
+import demo.app.user.dto.UpdateUserRequest;
 import demo.app.user.dto.UserDTO;
+import demo.app.user.dto.UserIdTokenResponse;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -20,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -44,11 +48,6 @@ public class ZitadelServiceImp implements ZitadelService {
 
     @Value("${zitadel.client_secret}")
     private String client_secret;
-
-
-
-
-
 
     @Override
     public String obtenerToken() {
@@ -165,10 +164,6 @@ public class ZitadelServiceImp implements ZitadelService {
     }
 
 
-
-
-
-
     @Override
     public ResponseEntity<ApiResponse<Object>> getUser() {
         String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
@@ -205,6 +200,127 @@ public class ZitadelServiceImp implements ZitadelService {
             return ResponseEntity.status(e.getStatusCode()).body(errorResponse);
         }
     }
+
+
+    public UserIdTokenResponse buscarUserIdYToken(String criterio, String valor) {
+        String token = obtenerToken();
+        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+        HttpEntity<String> request = new HttpEntity<>("{}", headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        try {
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    Object.class
+            );
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> root = mapper.convertValue(response.getBody(), new TypeReference<>() {});
+            List<Map<String, Object>> usuarios = (List<Map<String, Object>>) root.get("result");
+
+            for (Map<String, Object> usuario : usuarios) {
+                String userName = (String) usuario.get("userName");
+                Map<String, Object> human = (Map<String, Object>) usuario.get("human");
+
+                if (criterio.equalsIgnoreCase("userName") && userName != null && userName.equalsIgnoreCase(valor)) {
+                    return new UserIdTokenResponse((String) usuario.get("id"), token);
+                }
+
+                if (criterio.equalsIgnoreCase("email") && human != null) {
+                    Map<String, Object> email = (Map<String, Object>) human.get("email");
+                    if (email != null && valor.equalsIgnoreCase((String) email.get("email"))) {
+                        return new UserIdTokenResponse((String) usuario.get("id"), token);
+                    }
+                }
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            System.out.println("Error HTTP: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            System.out.println("Error al procesar la respuesta: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final String baseUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
+
+
+    @Override
+    public String updateUser(UpdateUserRequest req) {
+        StringBuilder result = new StringBuilder();
+
+        if (req.email != null) {
+            result.append(postRequest(baseUrl + req.userId + "/email", req.token, req.email));
+        }
+        if (req.phone != null) {
+            result.append(postRequest(baseUrl + req.userId + "/phone", req.token, req.phone));
+        }
+        if (req.profile != null) {
+            // Construir cuerpo de actualización de perfil
+            String url = baseUrl + "human/" + req.userId;
+            String body = """
+                {
+                  "username": "%s",
+                  "profile": {
+                    "givenName": "%s",
+                    "familyName": "%s",
+                    "displayName": "%s",
+                    "nickName": "%s",
+                    "preferredLanguage": "%s",
+                    "gender": "%s"
+                  }
+                }
+                """.formatted(
+                    req.profile.username,
+                    req.profile.givenName,
+                    req.profile.familyName,
+                    req.profile.displayName,
+                    req.profile.nickName,
+                    req.profile.preferredLanguage,
+                    req.profile.gender
+            );
+            result.append(putRequest(url, req.token, body));
+        }
+        if (req.password != null) {
+            result.append(postRequest(baseUrl + req.userId + "/password", req.token, req.password));
+        }
+
+        return result.toString();
+    }
+    private String postRequest(String url, String token, Object body) {
+        return sendRequest(url, token, body, HttpMethod.POST);
+    }
+
+    private String putRequest(String url, String token, Object body) {
+        return sendRequest(url, token, body, HttpMethod.PUT);
+    }
+
+    private String sendRequest(String url, String token, Object body, HttpMethod method) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token);
+
+            HttpEntity<Object> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
+
+            return "\n[" + method + "] " + url + ": " + response.getStatusCode();
+        } catch (Exception e) {
+            return "\n[" + method + "] " + url + ": ERROR - " + e.getMessage();
+        }
+    }
+
+
 
 
 }

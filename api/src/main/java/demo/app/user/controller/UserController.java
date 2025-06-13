@@ -1,9 +1,8 @@
 package demo.app.user.controller;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.user.dto.UpdateUserRequest;
 import demo.app.user.dto.UserDTO;
-import demo.app.user.service.UserService;
 import demo.app.user.service.ZitadelService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +41,12 @@ public class UserController {
     public ResponseEntity<ApiResponse<Object>> getUser() {
         return zitadelService.getUser();
     }
+
+    @PutMapping("/update-user")
+    public String updateUser(@RequestBody UpdateUserRequest request) {
+        return zitadelService.updateUser(request);
+    }
+
 
     @PostMapping("/Obtenertoken")
     public String obtenerToken() {
