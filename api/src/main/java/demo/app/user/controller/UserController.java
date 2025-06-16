@@ -1,5 +1,6 @@
 package demo.app.user.controller;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UserDTO;
 import demo.app.user.service.ZitadelService;
 import jakarta.validation.Valid;
@@ -24,10 +25,14 @@ public class UserController {
         return zitadelService.createUser(userDTO);
     }
 
-    @GetMapping("/")
-    public ResponseEntity<ApiResponse<Object>> getUser() {
-        return zitadelService.getUser();
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(@PathVariable String id) {
+        return zitadelService.getUser(id);
     }
 
+    @GetMapping("/")
+    public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getAllUsers() {
+        return zitadelService.getUser(null);
+    }
 
 }

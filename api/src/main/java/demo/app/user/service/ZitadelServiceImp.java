@@ -3,13 +3,16 @@ package demo.app.user.service;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UserDTO;
+import demo.app.user.dto.UserZitadelDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -79,23 +82,14 @@ public class ZitadelServiceImp implements ZitadelService {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<Object>> getUser() {
+    public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(ZITADEL_TOKEN);
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        try {/*
-            ResponseEntity<String> response = restTemplate.exchange(
-                    API_URL,
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-            return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", response.getBody()));
-            */
-
+        try {
             ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
                     API_URL,
                     HttpMethod.POST,
@@ -103,11 +97,29 @@ public class ZitadelServiceImp implements ZitadelService {
                     ResponseZitadelDTO.class
             );
 
-            System.out.println(response.getBody());
-
             ResponseZitadelDTO responseBody = response.getBody();
-            return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", responseBody));
 
+            if (responseBody != null && responseBody.getResult() != null) {
+                List<UserZitadelDto> allUsers = responseBody.getResult();
+
+                // Si no se solicitó ID específico, devolver todos los usuarios
+                if (id == null || id.isEmpty()) {
+                    return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", responseBody));
+                }
+
+                // Si hay un ID específico, filtrar
+                List<UserZitadelDto> filteredUsers = allUsers.stream()
+                        .filter(user -> id.equals(user.getId()))
+                        .collect(Collectors.toList());
+
+                ResponseZitadelDTO filteredResponse = new ResponseZitadelDTO();
+                filteredResponse.setDetails(responseBody.getDetails());
+                filteredResponse.setResult(filteredUsers);
+
+                return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", filteredResponse));
+            }
+
+            return ResponseEntity.ok(new ApiResponse<>(404, "Usuario no encontrado", null));
         } catch (Exception e) {
             return ResponseEntity.ok(new ApiResponse<>(400, "Error al obtener el usuario", null));
         }
