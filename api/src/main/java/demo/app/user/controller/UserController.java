@@ -60,6 +60,7 @@ public class UserController {
     }
 
     @PutMapping("/desactivate")
+    //@PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> desactivateUser(@RequestParam Long userId) {
         return zitadelService.desactivate(userId);
     }
