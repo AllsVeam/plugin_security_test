@@ -29,7 +29,7 @@ public class UserController {
         return "Hello World get";
     }
 
-    @PostMapping("/")
+    @PostMapping("/crear")
     public ResponseEntity<?> crearUsuario(@RequestBody UserDTO dto) {
         try {
             zitadelService.createUser(dto);
@@ -59,12 +59,12 @@ public class UserController {
         return zitadelService.deleteUser(userId);
     }
 
-    @PostMapping("/desactivate")
+    @PutMapping("/desactivate")
     public ResponseEntity<ApiResponse<Object>> desactivateUser(@RequestParam Long userId) {
         return zitadelService.desactivate(userId);
     }
 
-    @PostMapping("/reactivate")
+    @PutMapping("/reactivate")
     public ResponseEntity<ApiResponse<Object>> reactivateUser(@RequestParam Long userId) {
         return zitadelService.reactivate(userId);
     }
