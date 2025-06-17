@@ -405,6 +405,32 @@ public class ZitadelServiceImp implements ZitadelService {
         }
     }
 
+    @Override
+    public ResponseEntity<ApiResponse<Object>> getUserById(Long userId) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    ZITADEL_USER + userId, HttpMethod.GET, entity, Object.class
+            );
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(200, "Usuario obtenido correctamente", response.getBody())
+            );
+
+        } catch (HttpClientErrorException e) {
+            return handleZitadelError(e);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
+        }
+    }
+
     // TODO: Bad_Request, maneja el error del consumo y se queda interno dependiendo del codigo recivido ya sea 5 o 9, si fuera diferente es directo un BAD_REQUEST
     private ResponseEntity<ApiResponse<Object>> handleZitadelError(HttpClientErrorException e) {
         try {

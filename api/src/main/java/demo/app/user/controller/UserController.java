@@ -43,6 +43,11 @@ public class UserController {
         return zitadelService.getUser();
     }
 
+    @GetMapping("/user")
+    public ResponseEntity<ApiResponse<Object>> getUserById(@RequestParam Long userId) {
+        return zitadelService.getUserById(userId);
+    }
+
     @PutMapping("/update-user")
     public String updateUser(@RequestBody UpdateUserRequest request) {
         return zitadelService.updateUser(request);
