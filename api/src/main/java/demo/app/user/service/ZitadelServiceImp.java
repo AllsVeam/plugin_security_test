@@ -3,10 +3,7 @@ package demo.app.user.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
-import demo.app.user.dto.ResponseZitadelDTO;
-import demo.app.user.dto.UpdateUserRequest;
-import demo.app.user.dto.UserDTO;
-import demo.app.user.dto.UserIdTokenResponse;
+import demo.app.user.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -26,6 +23,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -168,39 +166,46 @@ public class ZitadelServiceImp implements ZitadelService {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<Object>> getUser() {
-        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
-        String token=obtenerToken();
-        // Token obtenido previamente vía client_credentials
-        String bearerToken = "Bearer "+token;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token); // sin "Bearer ", Spring lo agrega
-        HttpEntity<String> request = new HttpEntity<>("{}", headers);
-
+    public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id) {
         RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
         try {
-            ResponseEntity<Object> response = restTemplate.exchange(
-                    url,
+            ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
+                    API_URL,
                     HttpMethod.POST,
-                    request,
-                    Object.class
+                    entity,
+                    ResponseZitadelDTO.class
             );
 
-            ApiResponse<Object> apiResponse = new ApiResponse<>();
-            apiResponse.setMessage("Usuarios obtenidos correctamente");
-            apiResponse.setSuccess(true);
-            apiResponse.setData(response.getBody());
-            System.out.println(response);
-            return ResponseEntity.ok(apiResponse);
+            ResponseZitadelDTO responseBody = response.getBody();
 
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            ApiResponse<Object> errorResponse = new ApiResponse<>();
-            errorResponse.setMessage("Error al obtener usuarios: " + e.getMessage());
-            errorResponse.setSuccess(false);
-            return ResponseEntity.status(e.getStatusCode()).body(errorResponse);
+            if (responseBody != null && responseBody.getResult() != null) {
+                List<UserZitadelDto> allUsers = responseBody.getResult();
+
+                // Si no se solicitó ID específico, devolver todos los usuarios
+                if (id == null || id.isEmpty()) {
+                    return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", responseBody));
+                }
+
+                // Si hay un ID específico, filtrar
+                List<UserZitadelDto> filteredUsers = allUsers.stream()
+                        .filter(user -> id.equals(user.getId()))
+                        .collect(Collectors.toList());
+
+                ResponseZitadelDTO filteredResponse = new ResponseZitadelDTO();
+                filteredResponse.setDetails(responseBody.getDetails());
+                filteredResponse.setResult(filteredUsers);
+
+                return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", filteredResponse));
+            }
+
+            return ResponseEntity.ok(new ApiResponse<>(404, "Usuario no encontrado", null));
+        } catch (Exception e) {
+            return ResponseEntity.ok(new ApiResponse<>(400, "Error al obtener el usuario", null));
         }
     }
 
