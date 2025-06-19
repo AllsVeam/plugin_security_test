@@ -33,6 +33,8 @@ zitadel:
   scope: "openid profile email urn:zitadel:iam:org:project:id:zitadel:aud"
   urltoken: "https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token"
   urluser: "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/human"
+  proyect_id: "320736469398325498"
+  proyect_grand_id: "320771922155544476"
 
 zitadel2:
   scope: 'urn:zitadel:iam:org:project:id:320736469398325498:role:project.owner'

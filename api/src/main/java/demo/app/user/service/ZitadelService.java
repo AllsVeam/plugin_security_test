@@ -2,6 +2,8 @@ package demo.app.user.service;
 
 
 import demo.app.apiResponse.ApiResponse;
+import demo.app.user.roles.RoleGrantRequest;
+import demo.app.user.roles.RoleRequest;
 import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UpdateUserRequest;
 import demo.app.user.dto.UserDTO;
@@ -16,4 +18,8 @@ public interface ZitadelService{
     ResponseEntity<ApiResponse<Object>> desactivate(Long userId);
     ResponseEntity<ApiResponse<Object>> reactivate(Long userId);
     ResponseEntity<ApiResponse<Object>> getUserById(Long userId);
+    ResponseEntity<ApiResponse<Object>> createRol(RoleRequest data);
+    ResponseEntity<ApiResponse<Object>> deleteRol(String roleKey);
+    ResponseEntity<ApiResponse<Object>> updateRol(String roleKey, RoleRequest data);
+    ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data);
 }

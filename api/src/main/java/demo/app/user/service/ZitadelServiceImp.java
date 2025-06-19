@@ -3,6 +3,10 @@ package demo.app.user.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.user.roles.RoleGrantRequest;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import demo.app.user.roles.RoleRequest;
 import demo.app.user.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -15,11 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,9 @@ public class ZitadelServiceImp implements ZitadelService {
     private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
     private static final String ZITADEL_USER = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
+
+    @Value("${zitadel.proyect_id}")
+    private String proyectId;
 
     @Value("${zitadel.urltoken}")
     private String tokenUrl;
@@ -50,6 +56,9 @@ public class ZitadelServiceImp implements ZitadelService {
 
     @Value("${zitadel.client_secret}")
     private String client_secret;
+
+    @Value("${zitadel.proyect_grand_id}")
+    private String projectGrantId;
 
     @Override
     public String obtenerToken() {
@@ -456,5 +465,193 @@ public class ZitadelServiceImp implements ZitadelService {
                     .body(new ApiResponse<>(400, "Error al parsear el mensaje de error", null));
         }
     }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> createRol(RoleRequest data) {
+        try {
+            String roleKey = data.getRoleKey();
+
+            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles";
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            JSONObject json = new JSONObject();
+            json.put("roleKey", data.getRoleKey());
+            json.put("displayName", data.getDisplayName());
+            json.put("group", data.getGroup() != null ? data.getGroup() : "");
+
+            HttpEntity<String> entity = new HttpEntity<>(json.toString(), headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
+
+            return ResponseEntity.ok(new ApiResponse<>(200, "Rol creado correctamente", response.getBody()));
+
+        } catch (HttpClientErrorException e) {
+            return handleZitadelError(e);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> deleteRol(String roleKey) {
+        try {
+            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/" + roleKey;
+
+            RestTemplate restTemplate = new RestTemplate();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.DELETE,
+                    entity,
+                    Object.class
+            );
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(200, "Rol eliminado correctamente", response.getBody())
+            );
+
+        } catch (HttpClientErrorException e) {
+            return handleZitadelError(e);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> updateRol(String roleKey, RoleRequest data) {
+        try {
+            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/" + roleKey;
+
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            JSONObject payload = new JSONObject();
+            payload.put("displayName", data.getDisplayName());
+            payload.put("group", data.getGroup() != null ? data.getGroup() : "");
+
+            HttpEntity<String> entity = new HttpEntity<>(payload.toString(), headers);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.PUT,
+                    entity,
+                    Object.class
+            );
+
+            return ResponseEntity.ok(new ApiResponse<>(200, "Rol actualizado correctamente", response.getBody()));
+
+        } catch (HttpClientErrorException e) {
+            return handleZitadelError(e);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data) {
+        System.out.println("🚀 Iniciando asignación de roles al usuario...");
+        System.out.println("📥 Datos recibidos:");
+        System.out.println("  - userId: " + data.getUserId());
+        System.out.println("  - roleKeys: " + data.getRoleKeys());
+
+        try {
+            String userId = data.getUserId();
+            String urlGetGrants = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants";
+
+            // Configurar headers
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            System.out.println("🔎 Consultando grants actuales del usuario...");
+            ResponseEntity<String> response = restTemplate.exchange(urlGetGrants, HttpMethod.GET, entity, String.class);
+            System.out.println("✅ Respuesta de grants: " + response.getBody());
+
+            JSONObject body = new JSONObject(response.getBody());
+            JSONArray grants = body.optJSONArray("result");
+            String userGrantIdToDelete = null;
+
+            // Verificar si ya existe un grant con los mismos roles
+            if (grants != null) {
+                for (int i = 0; i < grants.length(); i++) {
+                    JSONObject grant = grants.getJSONObject(i);
+                    String projectId = grant.optString("projectId");
+
+                    if (projectId.equals(proyectId)) {
+                        JSONArray existingRoles = grant.optJSONArray("roles");
+                        List<String> incomingRoles = data.getRoleKeys();
+
+                        if (existingRoles != null && existingRoles.toList().containsAll(incomingRoles)) {
+                            System.out.println("⚠️ El usuario ya tiene estos roles asignados.");
+                            return ResponseEntity.ok(new ApiResponse<>(200, "El usuario ya tiene estos roles asignados", null));
+                        }
+
+                        userGrantIdToDelete = grant.optString("userGrantId");
+                        break;
+                    }
+                }
+            } else {
+                System.out.println("⚠️ No se encontraron grants actuales para el usuario.");
+            }
+
+            // Si hay que eliminar el grant anterior
+            if (userGrantIdToDelete != null && !userGrantIdToDelete.isEmpty()) {
+                String deleteUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants/" + userGrantIdToDelete;
+                System.out.println("🗑️ Eliminando grant anterior con ID: " + userGrantIdToDelete);
+
+                ResponseEntity<String> deleteResp = restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, String.class);
+                System.out.println("✅ Grant eliminado. Código: " + deleteResp.getStatusCode());
+            }
+
+            // Crear nuevo grant
+            JSONObject payload = new JSONObject();
+            payload.put("projectId", proyectId);
+            payload.put("roleKeys", new JSONArray(data.getRoleKeys()));
+
+            String urlAssign = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants";
+            HttpEntity<String> assignEntity = new HttpEntity<>(payload.toString(), headers);
+
+            System.out.println("📤 Enviando nuevo grant al usuario...");
+            System.out.println("Payload: " + payload.toString());
+
+            ResponseEntity<Object> assignResp = restTemplate.exchange(urlAssign, HttpMethod.POST, assignEntity, Object.class);
+            System.out.println("✅ Roles asignados correctamente");
+
+            return ResponseEntity.ok(new ApiResponse<>(200, "Rol(es) asignado(s) correctamente", assignResp.getBody()));
+
+        } catch (HttpClientErrorException e) {
+            System.out.println("❌ Error HTTP: " + e.getStatusCode());
+            System.out.println("Mensaje: " + e.getResponseBodyAsString());
+            return handleZitadelError(e);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error inesperado: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
+        }
+    }
+
+
+
 
 }
