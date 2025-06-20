@@ -22,10 +22,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -565,91 +562,106 @@ public class ZitadelServiceImp implements ZitadelService {
 
     @Override
     public ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data) {
-        System.out.println("🚀 Iniciando asignación de roles al usuario...");
-        System.out.println("📥 Datos recibidos:");
-        System.out.println("  - userId: " + data.getUserId());
-        System.out.println("  - roleKeys: " + data.getRoleKeys());
+
+        String userId = data.getUserId();
+        String urlAssign = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants";
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            String userId = data.getUserId();
-            String urlGetGrants = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants";
-
-            // Configurar headers
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            System.out.println("🔎 Consultando grants actuales del usuario...");
-            ResponseEntity<String> response = restTemplate.exchange(urlGetGrants, HttpMethod.GET, entity, String.class);
-            System.out.println("✅ Respuesta de grants: " + response.getBody());
-
-            JSONObject body = new JSONObject(response.getBody());
-            JSONArray grants = body.optJSONArray("result");
-            String userGrantIdToDelete = null;
-
-            // Verificar si ya existe un grant con los mismos roles
-            if (grants != null) {
-                for (int i = 0; i < grants.length(); i++) {
-                    JSONObject grant = grants.getJSONObject(i);
-                    String projectId = grant.optString("projectId");
-
-                    if (projectId.equals(proyectId)) {
-                        JSONArray existingRoles = grant.optJSONArray("roles");
-                        List<String> incomingRoles = data.getRoleKeys();
-
-                        if (existingRoles != null && existingRoles.toList().containsAll(incomingRoles)) {
-                            System.out.println("⚠️ El usuario ya tiene estos roles asignados.");
-                            return ResponseEntity.ok(new ApiResponse<>(200, "El usuario ya tiene estos roles asignados", null));
-                        }
-
-                        userGrantIdToDelete = grant.optString("userGrantId");
-                        break;
-                    }
-                }
-            } else {
-                System.out.println("⚠️ No se encontraron grants actuales para el usuario.");
-            }
-
-            // Si hay que eliminar el grant anterior
-            if (userGrantIdToDelete != null && !userGrantIdToDelete.isEmpty()) {
-                String deleteUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants/" + userGrantIdToDelete;
-                System.out.println("🗑️ Eliminando grant anterior con ID: " + userGrantIdToDelete);
-
-                ResponseEntity<String> deleteResp = restTemplate.exchange(deleteUrl, HttpMethod.DELETE, entity, String.class);
-                System.out.println("✅ Grant eliminado. Código: " + deleteResp.getStatusCode());
-            }
-
-            // Crear nuevo grant
             JSONObject payload = new JSONObject();
             payload.put("projectId", proyectId);
             payload.put("roleKeys", new JSONArray(data.getRoleKeys()));
 
-            String urlAssign = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants";
             HttpEntity<String> assignEntity = new HttpEntity<>(payload.toString(), headers);
-
-            System.out.println("📤 Enviando nuevo grant al usuario...");
-            System.out.println("Payload: " + payload.toString());
-
             ResponseEntity<Object> assignResp = restTemplate.exchange(urlAssign, HttpMethod.POST, assignEntity, Object.class);
-            System.out.println("✅ Roles asignados correctamente");
 
             return ResponseEntity.ok(new ApiResponse<>(200, "Rol(es) asignado(s) correctamente", assignResp.getBody()));
 
         } catch (HttpClientErrorException e) {
-            System.out.println("❌ Error HTTP: " + e.getStatusCode());
-            System.out.println("Mensaje: " + e.getResponseBodyAsString());
+            String body = e.getResponseBodyAsString();
+            System.out.println("Error HTTP: " + e.getStatusCode());
+            System.out.println("Mensaje: " + body);
+
+            if (e.getStatusCode() == HttpStatus.CONFLICT && body.contains("User grant already exists")) {
+                try {
+                    String urlSearch = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/grants/_search";
+
+                    JSONObject searchPayload = new JSONObject();
+                    JSONArray queries = new JSONArray();
+                    JSONObject userIdQuery = new JSONObject();
+                    userIdQuery.put("userId", userId);
+
+                    JSONObject queryWrapper = new JSONObject();
+                    queryWrapper.put("userIdQuery", userIdQuery);
+                    queries.put(queryWrapper);
+
+                    searchPayload.put("queries", queries);
+
+                    HttpEntity<String> searchEntity = new HttpEntity<>(searchPayload.toString(), headers);
+                    ResponseEntity<String> response = restTemplate.exchange(urlSearch, HttpMethod.POST, searchEntity, String.class);
+                    JSONArray results = new JSONObject(response.getBody()).optJSONArray("result");
+
+                    String grantIdToUpdate = null;
+
+                    if (results != null) {
+                        for (int i = 0; i < results.length(); i++) {
+                            JSONObject grant = results.getJSONObject(i);
+                            if (proyectId.equals(grant.optString("projectId"))) {
+                                grantIdToUpdate = grant.optString("id");
+                                break;
+                            }
+                        }
+                    }
+
+                    if (grantIdToUpdate == null) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(new ApiResponse<>(400, "No se pudo encontrar grant existente para actualizar", null));
+                    }
+                    String updateUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants/" + grantIdToUpdate;
+
+                    JSONObject updatePayload = new JSONObject();
+                    updatePayload.put("projectId", proyectId);
+                    updatePayload.put("roleKeys", new JSONArray(data.getRoleKeys()));
+
+                    HttpEntity<String> updateEntity = new HttpEntity<>(updatePayload.toString(), headers);
+                    ResponseEntity<Object> updateResp = restTemplate.exchange(updateUrl, HttpMethod.PUT, updateEntity, Object.class);
+
+                    return ResponseEntity.ok(new ApiResponse<>(200, "Roles actualizados correctamente", updateResp.getBody()));
+
+                } catch (HttpClientErrorException updateEx) {
+                    String updateBody = updateEx.getResponseBodyAsString();
+                    if (updateEx.getStatusCode() == HttpStatus.BAD_REQUEST &&
+                            updateBody.contains("User grant has not been changed")) {
+                        return ResponseEntity.ok(new ApiResponse<>(200, "Rol(es) ya estaban asignados. Nada que actualizar.", null));
+                    } else {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(new ApiResponse<>(500, "Error al actualizar grant existente", null));
+                    }
+                } catch (Exception ex) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(new ApiResponse<>(500, "Error inesperado al actualizar grant", null));
+                }
+            }
+
             return handleZitadelError(e);
 
         } catch (Exception e) {
-            System.out.println("❌ Error inesperado: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
         }
     }
+
+
+
+
+
+
+
 
 
 
