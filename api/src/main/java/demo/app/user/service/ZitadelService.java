@@ -9,9 +9,12 @@ import demo.app.user.dto.UpdateUserRequest;
 import demo.app.user.dto.UserDTO;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+import java.util.Map;
+
 public interface ZitadelService{
-    void createUser(UserDTO userDTO);
-    public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id);
+    ResponseEntity<ApiResponse<Object>> createUser(UserDTO userDTO);
+    ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id);
     String obtenerToken();
     String updateUser(UpdateUserRequest request);
     ResponseEntity<ApiResponse<Object>> deleteUser(Long userId);
@@ -22,4 +25,5 @@ public interface ZitadelService{
     ResponseEntity<ApiResponse<Object>> deleteRol(String roleKey);
     ResponseEntity<ApiResponse<Object>> updateRol(String roleKey, RoleRequest data);
     ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data);
+    List<Map<String, Object>> getRoles();
 }

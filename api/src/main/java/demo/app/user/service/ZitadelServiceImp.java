@@ -96,7 +96,7 @@ public class ZitadelServiceImp implements ZitadelService {
 
 
     @Override
-    public void createUser(UserDTO dto) {
+    public ResponseEntity<ApiResponse<Object>> createUser(UserDTO dto) {
         try {
             String token = obtenerToken();
 
@@ -142,12 +142,7 @@ public class ZitadelServiceImp implements ZitadelService {
             ObjectMapper mapper = new ObjectMapper();
             String json = mapper.writeValueAsString(payload);
 
-            System.out.println("Payload generado:\n" + json);
-
-            RequestBody body = RequestBody.create(
-                    json,
-                    okhttp3.MediaType.parse("application/json")
-            );
+            RequestBody body = RequestBody.create(json, okhttp3.MediaType.parse("application/json"));
 
             Request request = new Request.Builder()
                     .url(urlUser)
@@ -164,12 +159,17 @@ public class ZitadelServiceImp implements ZitadelService {
                 throw new RuntimeException("Error al crear usuario en Zitadel: " + responseBody);
             }
 
-            System.out.println("Usuario creado correctamente.");
+            // Leer y parsear respuesta JSON
+            String responseBody = response.body().string();
+            Map<String, Object> responseData = mapper.readValue(responseBody, Map.class);
+
+            return ResponseEntity.ok(new ApiResponse<>(200, "Usuario creado correctamente", responseData));
 
         } catch (Exception e) {
             throw new RuntimeException("Error al crear usuario en Zitadel", e);
         }
     }
+
 
     @Override
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id) {
@@ -655,6 +655,49 @@ public class ZitadelServiceImp implements ZitadelService {
                     .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
         }
     }
+
+    @Override
+    public List<Map<String, Object>> getRoles() {
+        try {
+            OkHttpClient client = new OkHttpClient();
+            ObjectMapper mapper = new ObjectMapper();
+
+            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/_search";
+            RequestBody body = RequestBody.create(
+                    "",
+                    okhttp3.MediaType.parse("application/json")
+            );
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .addHeader("Authorization", "Bearer " + ZITADEL_TOKEN)
+                    .addHeader("Content-Type", "application/json")
+                    .build();
+
+            Response response = client.newCall(request).execute();
+
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
+                throw new RuntimeException("Error HTTP al obtener roles: " + responseBody);
+            }
+
+            String responseBody = response.body().string();
+
+            Map<String, Object> responseData = mapper.readValue(responseBody, Map.class);
+
+            if (!responseData.containsKey("result")) {
+                throw new RuntimeException("La respuesta no contiene el campo 'result'");
+            }
+
+            return (List<Map<String, Object>>) responseData.get("result");
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener roles: " + e.getMessage(), e);
+        }
+    }
+
+
+
 
 
 

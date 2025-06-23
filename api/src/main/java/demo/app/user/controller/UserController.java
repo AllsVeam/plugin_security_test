@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,13 +36,9 @@ public class UserController {
     }
 
     @PostMapping("/crear")
-    public ResponseEntity<?> crearUsuario(@RequestBody UserDTO dto) {
-        try {
-            zitadelService.createUser(dto);
-            return ResponseEntity.ok("Usuario creado correctamente en Zitadel");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error al crear usuario: " + e.getMessage());
-        }    }
+    public ResponseEntity<ApiResponse<Object>> crearUsuario(@RequestBody UserDTO dto) {
+            return zitadelService.createUser(dto);
+    }
 
     @GetMapping("/")
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getAllUsers() {
@@ -120,5 +117,9 @@ public class UserController {
         return zitadelService.assignRolesToUser(data);
     }
 
+    @GetMapping("/roles")
+    public List<Map<String, Object>> getFullRoles(){
+        return zitadelService.getRoles();
+    }
 
 }
