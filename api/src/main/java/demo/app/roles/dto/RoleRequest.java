@@ -1,4 +1,4 @@
-package demo.app.user.roles;
+package demo.app.roles.dto;
 
 public class RoleRequest {
     private String roleKey;

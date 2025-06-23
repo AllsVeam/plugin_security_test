@@ -2,7 +2,6 @@ package demo.app.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.user.roles.RoleGrantRequest;
-import demo.app.user.roles.RoleRequest;
 import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UpdateUserRequest;
 import demo.app.user.dto.UserDTO;
@@ -97,29 +96,9 @@ public class UserController {
         return zitadelService.reactivate(userId);
     }
 
-    @PutMapping("/roles")
-    public ResponseEntity<ApiResponse<Object>> createRol(@RequestBody RoleRequest data) {
-        return zitadelService.createRol(data);
-    }
-
-    @DeleteMapping("/roles/{roleKey}")
-    public ResponseEntity<ApiResponse<Object>> deleteRol(@PathVariable String roleKey) {
-        return zitadelService.deleteRol(roleKey);
-    }
-
-    @PutMapping("/roles/{roleKey}")
-    public ResponseEntity<ApiResponse<Object>> updateRol(@PathVariable String roleKey, @RequestBody RoleRequest data) {
-        return zitadelService.updateRol(roleKey, data);
-    }
-
     @PostMapping("/assign-roles")
     public ResponseEntity<ApiResponse<Object>> assignRolesToUser(@RequestBody RoleGrantRequest data) {
         return zitadelService.assignRolesToUser(data);
-    }
-
-    @GetMapping("/roles")
-    public List<Map<String, Object>> getFullRoles(){
-        return zitadelService.getRoles();
     }
 
 }

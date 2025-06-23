@@ -6,7 +6,6 @@ import demo.app.apiResponse.ApiResponse;
 import demo.app.user.roles.RoleGrantRequest;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import demo.app.user.roles.RoleRequest;
 import demo.app.user.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -442,124 +441,6 @@ public class ZitadelServiceImp implements ZitadelService {
         }
     }
 
-    // TODO: Bad_Request, maneja el error del consumo y se queda interno dependiendo del codigo recivido ya sea 5 o 9, si fuera diferente es directo un BAD_REQUEST
-    private ResponseEntity<ApiResponse<Object>> handleZitadelError(HttpClientErrorException e) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> errorJson = mapper.readValue(e.getResponseBodyAsString(), Map.class);
-
-            int code = (int) errorJson.getOrDefault("code", 400);
-            String message = (String) errorJson.getOrDefault("message", "Error desconocido");
-            Object details = errorJson.get("details");
-
-            HttpStatus status = (code == 5) ? HttpStatus.NOT_FOUND : (code == 9) ? HttpStatus.ACCEPTED : HttpStatus.BAD_REQUEST;
-
-            return ResponseEntity.status(status)
-                    .body(new ApiResponse<>(code, message, details));
-
-        } catch (Exception parseException) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse<>(400, "Error al parsear el mensaje de error", null));
-        }
-    }
-
-    @Override
-    public ResponseEntity<ApiResponse<Object>> createRol(RoleRequest data) {
-        try {
-            String roleKey = data.getRoleKey();
-
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles";
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            JSONObject json = new JSONObject();
-            json.put("roleKey", data.getRoleKey());
-            json.put("displayName", data.getDisplayName());
-            json.put("group", data.getGroup() != null ? data.getGroup() : "");
-
-            HttpEntity<String> entity = new HttpEntity<>(json.toString(), headers);
-
-            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
-
-            return ResponseEntity.ok(new ApiResponse<>(200, "Rol creado correctamente", response.getBody()));
-
-        } catch (HttpClientErrorException e) {
-            return handleZitadelError(e);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
-        }
-    }
-
-    @Override
-    public ResponseEntity<ApiResponse<Object>> deleteRol(String roleKey) {
-        try {
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/" + roleKey;
-
-            RestTemplate restTemplate = new RestTemplate();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<Object> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.DELETE,
-                    entity,
-                    Object.class
-            );
-
-            return ResponseEntity.ok(
-                    new ApiResponse<>(200, "Rol eliminado correctamente", response.getBody())
-            );
-
-        } catch (HttpClientErrorException e) {
-            return handleZitadelError(e);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
-        }
-    }
-
-    @Override
-    public ResponseEntity<ApiResponse<Object>> updateRol(String roleKey, RoleRequest data) {
-        try {
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/" + roleKey;
-
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            JSONObject payload = new JSONObject();
-            payload.put("displayName", data.getDisplayName());
-            payload.put("group", data.getGroup() != null ? data.getGroup() : "");
-
-            HttpEntity<String> entity = new HttpEntity<>(payload.toString(), headers);
-
-            ResponseEntity<Object> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.PUT,
-                    entity,
-                    Object.class
-            );
-
-            return ResponseEntity.ok(new ApiResponse<>(200, "Rol actualizado correctamente", response.getBody()));
-
-        } catch (HttpClientErrorException e) {
-            return handleZitadelError(e);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>(500, "Error inesperado: " + e.getMessage(), null));
-        }
-    }
-
     @Override
     public ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data) {
 
@@ -656,45 +537,28 @@ public class ZitadelServiceImp implements ZitadelService {
         }
     }
 
-    @Override
-    public List<Map<String, Object>> getRoles() {
+    // TODO: Bad_Request, maneja el error del consumo y se queda interno dependiendo del codigo recivido ya sea 5 o 9, si fuera diferente es directo un BAD_REQUEST
+    private ResponseEntity<ApiResponse<Object>> handleZitadelError(HttpClientErrorException e) {
         try {
-            OkHttpClient client = new OkHttpClient();
             ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> errorJson = mapper.readValue(e.getResponseBodyAsString(), Map.class);
 
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/_search";
-            RequestBody body = RequestBody.create(
-                    "",
-                    okhttp3.MediaType.parse("application/json")
-            );
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(body)
-                    .addHeader("Authorization", "Bearer " + ZITADEL_TOKEN)
-                    .addHeader("Content-Type", "application/json")
-                    .build();
+            int code = (int) errorJson.getOrDefault("code", 400);
+            String message = (String) errorJson.getOrDefault("message", "Error desconocido");
+            Object details = errorJson.get("details");
 
-            Response response = client.newCall(request).execute();
+            HttpStatus status = (code == 5) ? HttpStatus.NOT_FOUND : (code == 9) ? HttpStatus.ACCEPTED : HttpStatus.BAD_REQUEST;
 
-            if (!response.isSuccessful()) {
-                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
-                throw new RuntimeException("Error HTTP al obtener roles: " + responseBody);
-            }
+            return ResponseEntity.status(status)
+                    .body(new ApiResponse<>(code, message, details));
 
-            String responseBody = response.body().string();
-
-            Map<String, Object> responseData = mapper.readValue(responseBody, Map.class);
-
-            if (!responseData.containsKey("result")) {
-                throw new RuntimeException("La respuesta no contiene el campo 'result'");
-            }
-
-            return (List<Map<String, Object>>) responseData.get("result");
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error al obtener roles: " + e.getMessage(), e);
+        } catch (Exception parseException) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(400, "Error al parsear el mensaje de error", null));
         }
     }
+
+
 
 
 
