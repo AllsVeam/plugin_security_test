@@ -15,12 +15,12 @@ public class RolesController {
     @Autowired
     private RolesService rolesService;
 
-    @GetMapping("/")
+    @GetMapping("")
     public ResponseEntity<ApiResponse<Object>> listRoles() {
         return rolesService.getRoles();
     }
 
-    @PostMapping("/")
+    @PostMapping("")
     public ResponseEntity<ApiResponse<Object>> createRol(@RequestBody RoleRequest data) {
         return rolesService.createRol(data);
     }
