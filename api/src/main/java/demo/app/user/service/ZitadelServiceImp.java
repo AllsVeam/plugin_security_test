@@ -558,19 +558,130 @@ public class ZitadelServiceImp implements ZitadelService {
         }
     }
 
+    @Override
+    public List<Map<String, Object>> getAllSessions() {
+        String token = obtenerToken();
+        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/sessions/search";
 
+        try {
+            OkHttpClient client = new OkHttpClient().newBuilder().build();
 
+            String jsonBody = """
+        {
+          "query": {
+            "offset": 0,
+            "limit": 100,
+            "asc": false
+          },
+          "queries": [],
+          "sortingColumn": "SESSION_FIELD_NAME_UNSPECIFIED"
+        }
+        """;
 
+            RequestBody body = RequestBody.create(
+                    jsonBody,
+                    okhttp3.MediaType.parse("application/json")
+            );
 
+            Request request = new Request.Builder()
+                    .url(url)
+                    .method("POST", body)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("Authorization", "Bearer " + token)
+                    .build();
 
+            Response response = client.newCall(request).execute();
 
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
+                log.error("Error al consultar sesiones: {}", responseBody);
+                throw new RuntimeException("Error al consultar sesiones: " + responseBody);
+            }
 
+            String responseBody = response.body().string();
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> responseMap = mapper.readValue(responseBody, new TypeReference<>() {});
+            List<Map<String, Object>> sesiones = (List<Map<String, Object>>) responseMap.get("sessions");
 
+            for (Map<String, Object> sesion : sesiones) {
+                Map<String, Object> userAgent = (Map<String, Object>) sesion.get("userAgent");
+                sesion.put("deviceInfo", userAgent != null ? userAgent.get("raw") : null);
+                sesion.put("fingerprintId", userAgent != null ? userAgent.get("fingerprintId") : null);
+                sesion.put("ip", sesion.get("ipAddress"));
+                sesion.put("localizacion", sesion.get("location"));
+            }
 
+            return sesiones;
 
+        } catch (Exception e) {
+            log.error("Excepción al obtener sesiones: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
 
+    @Override
+    public List<Map<String, Object>> getSessionsByUserId(String userId) {
+        String token = obtenerToken();
+        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/sessions/search";
 
+        try {
+            OkHttpClient client = new OkHttpClient().newBuilder().build();
 
+            String jsonBody = """
+        {
+          "query": {
+            "offset": 0,
+            "limit": 100,
+            "asc": false
+          },
+          "queries": [
+            {
+              "userIdQuery": {
+                "id": "%s"
+              }
+            }
+          ],
+          "sortingColumn": "SESSION_FIELD_NAME_UNSPECIFIED"
+        }
+        """.formatted(userId);
 
+            RequestBody body = RequestBody.create(jsonBody, okhttp3.MediaType.parse("application/json"));
 
+            Request request = new Request.Builder()
+                    .url(url)
+                    .method("POST", body)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("Authorization", "Bearer " + token)
+                    .build();
+
+            Response response = client.newCall(request).execute();
+
+            if (!response.isSuccessful()) {
+                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
+                log.error("Error al consultar sesiones por userId: {}", responseBody);
+                throw new RuntimeException("Error al consultar sesiones: " + responseBody);
+            }
+
+            String responseBody = response.body().string();
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> responseMap = mapper.readValue(responseBody, new TypeReference<>() {});
+            List<Map<String, Object>> sesiones = (List<Map<String, Object>>) responseMap.get("sessions");
+
+            for (Map<String, Object> sesion : sesiones) {
+                Map<String, Object> userAgent = (Map<String, Object>) sesion.get("userAgent");
+                sesion.put("deviceInfo", userAgent != null ? userAgent.get("raw") : null);
+                sesion.put("fingerprintId", userAgent != null ? userAgent.get("fingerprintId") : null);
+                sesion.put("ip", sesion.get("ipAddress"));
+                sesion.put("localizacion", sesion.get("location"));
+            }
+
+            return sesiones;
+
+        } catch (Exception e) {
+            log.error("Excepción al obtener sesiones por userId: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
 }

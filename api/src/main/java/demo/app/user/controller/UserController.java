@@ -101,4 +101,43 @@ public class UserController {
         return zitadelService.assignRolesToUser(data);
     }
 
+    @PostMapping("/sessions")
+    public ResponseEntity<ApiResponse<Object>> buscarTodasLasSesiones() {
+        try {
+            List<Map<String, Object>> sesiones = zitadelService.getAllSessions();
+
+            ApiResponse<Object> response = new ApiResponse<>();
+            response.setSuccess(true);
+            response.setMessage("Sesiones recuperadas correctamente");
+            response.setData(sesiones);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            ApiResponse<Object> error = new ApiResponse<>();
+            error.setSuccess(false);
+            error.setMessage("Error al obtener sesiones: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    @PostMapping("/sessions/by-user")
+    public ResponseEntity<ApiResponse<Object>> buscarSesionesPorUsuario(@RequestParam String userId) {
+        try {
+            List<Map<String, Object>> sesiones = zitadelService.getSessionsByUserId(userId);
+
+            ApiResponse<Object> response = new ApiResponse<>();
+            response.setSuccess(true);
+            response.setMessage("Sesiones del usuario recuperadas correctamente");
+            response.setData(sesiones);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            ApiResponse<Object> error = new ApiResponse<>();
+            error.setSuccess(false);
+            error.setMessage("Error al obtener sesiones por usuario: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
 }

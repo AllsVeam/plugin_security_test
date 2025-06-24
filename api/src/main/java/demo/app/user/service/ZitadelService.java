@@ -8,6 +8,9 @@ import demo.app.user.dto.UpdateUserRequest;
 import demo.app.user.dto.UserDTO;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+import java.util.Map;
+
 public interface ZitadelService{
     ResponseEntity<ApiResponse<Object>> createUser(UserDTO userDTO);
     ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id);
@@ -18,4 +21,6 @@ public interface ZitadelService{
     ResponseEntity<ApiResponse<Object>> reactivate(Long userId);
     ResponseEntity<ApiResponse<Object>> getUserById(Long userId);
     ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data);
+    List<Map<String, Object>> getAllSessions();
+    List<Map<String, Object>> getSessionsByUserId(String userId);
 }
