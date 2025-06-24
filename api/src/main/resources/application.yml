@@ -19,6 +19,12 @@ spring:
           introspection-uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect'
           client-id: '320912215601386953'
           client-secret: 'Oi6WQvgYw5XwfACyH3DQWi0jkF47mzS7ZUFy83uODqrQEDAK0wXr41vSDxPT0OTu'
+  datasource:
+    url: jdbc:mariadb://localhost:3306/fineract_default
+    username: root
+    password: mysql
+    driver-class-name: org.mariadb.jdbc.Driver
+
 logging:
   level:
     root: info

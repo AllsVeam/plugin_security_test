@@ -2,11 +2,13 @@ package demo.app.api.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import demo.app.api.NoRolesAssignedException;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.api.service.TokenMapper;
 import demo.app.api.dto.UserDetailsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +36,8 @@ class ExampleController {
 
     private ArrayList<String> tasks = new ArrayList<>();
     private static final Logger log = LoggerFactory.getLogger(ExampleController.class);
+    @Autowired
+    private TokenMapper tokenMapper;
 
     @GetMapping("/api/healthz")
     Object healthz() {
@@ -94,6 +98,7 @@ class ExampleController {
         return response.getBody();
     }
 
+
     @PostMapping("/api/DTO-token")
     public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
         ApiResponse<UserDetailsDTO> response = new ApiResponse<>();
@@ -106,20 +111,19 @@ class ExampleController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
 
-            UserDetailsDTO userDetails = TokenMapper.mapTokenToUserDetails(tokenPayload);
-            System.out.println("userDetails = " + userDetails);
-            if (userDetails == null || userDetails.getUserId() == null) {
-                response.setStatus(401);
-                response.setMsg("Invalid or unrecognized token");
-                response.setObject(null);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-            }
+            UserDetailsDTO userDetails = tokenMapper.mapTokenToUserDetails(tokenPayload);
 
             response.setStatus(200);
             response.setMsg("Full user");
-            System.out.println("tokenPayload = " + response);
             response.setObject(userDetails);
+            System.out.println("DTO  = " + response);
             return ResponseEntity.ok(response);
+
+        } catch (NoRolesAssignedException e) {
+            response.setStatus(403);
+            response.setMsg(e.getMessage());
+            response.setObject(null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
 
         } catch (Exception ex) {
             response.setStatus(500);
@@ -128,6 +132,9 @@ class ExampleController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+
+
 
     @PostMapping("/token2")
     public ResponseEntity<?> getToken(@RequestBody Map<String, String> payload) {
