@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class ZitadelServiceImp implements ZitadelService {
+public class UserServiceImp implements UserService {
     // https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/
     private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
@@ -274,25 +274,29 @@ public class ZitadelServiceImp implements ZitadelService {
         if (req.email != null) {
             result.append(postRequest(baseUrl + req.userId + "/email", req.token, req.email));
         }
+
         if (req.phone != null) {
             result.append(postRequest(baseUrl + req.userId + "/phone", req.token, req.phone));
         }
+
         if (req.profile != null) {
-            // Construir cuerpo de actualización de perfil
             String url = baseUrl + "human/" + req.userId;
+
             String body = """
-                {
-                  "username": "%s",
-                  "profile": {
-                    "givenName": "%s",
-                    "familyName": "%s",
-                    "displayName": "%s",
-                    "nickName": "%s",
-                    "preferredLanguage": "%s",
-                    "gender": "%s"
-                  }
-                }
-                """.formatted(
+            {
+              "userId": "%s",
+              "username": "%s",
+              "profile": {
+                "givenName": "%s",
+                "familyName": "%s",
+                "displayName": "%s",
+                "nickName": "%s",
+                "preferredLanguage": "%s",
+                "gender": "%s"
+              }
+            }
+            """.formatted(
+                    req.userId,
                     req.profile.username,
                     req.profile.givenName,
                     req.profile.familyName,
@@ -303,12 +307,17 @@ public class ZitadelServiceImp implements ZitadelService {
             );
             result.append(putRequest(url, req.token, body));
         }
-        if (req.password != null) {
-            result.append(postRequest(baseUrl + req.userId + "/password", req.token, req.password));
-        }
 
         return result.toString();
     }
+
+    @Override
+    public String updatePass(UpdateUserRequest req){
+        StringBuilder result = new StringBuilder();
+        result.append(postRequest(baseUrl + req.userId + "/password", req.token, req.password));
+        return result.toString();
+    }
+
     private String postRequest(String url, String token, Object body) {
         return sendRequest(url, token, body, HttpMethod.POST);
     }

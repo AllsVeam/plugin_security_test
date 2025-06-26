@@ -1,106 +1,40 @@
-package demo.app.api.controller;
+package demo.app.api.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.api.NoRolesAssignedException;
-import demo.app.apiResponse.ApiResponse;
-import demo.app.api.service.TokenMapper;
+import demo.app.api.dto.RoleDTO;
 import demo.app.api.dto.UserDetailsDTO;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import demo.app.api.repository.PermissionService;
+import demo.app.apiResponse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
-import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestWrapper;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import jakarta.servlet.http.HttpServletResponse;
+@Service
+public class ApiServiceImp implements ApiService {
 
-@RestController
-class ExampleController {
+    @Autowired
+    PermissionService permissionService;
 
-    private ArrayList<String> tasks = new ArrayList<>();
-    private static final Logger log = LoggerFactory.getLogger(ExampleController.class);
     @Autowired
     private TokenMapper tokenMapper;
 
-    @GetMapping("/api/healthz")
-    Object healthz() {
-        return "OK";
-    }
-
-    @GetMapping(value = "/api/tasks", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("isAuthenticated()")
-    Object tasks(SecurityContextHolderAwareRequestWrapper requestWrapper) {
-        if (this.tasks.size() > 0 || !requestWrapper.isUserInRole("ROLE_admin")) {
-            return this.tasks;
-        }
-        log.debug("Entrando a la llamada");
-        return Arrays.asList("add the first task");
-    }
-
-    @GetMapping(value = "/api/consulta", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("isAuthenticated()")
-    Object tasks2() {
-        return "Estamos autorizados";
-    }
-
-    @PostMapping(value = "/api/tasks", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('admin')")
-    Object addTask(@RequestBody String task, HttpServletResponse response) {
-        if (task.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "task must not be empty");
-        }
-        this.tasks.add(task);
-        return "task added";
-    }
-
-    @GetMapping("/api/project-roles")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> getProjectRoles() {
-        String token = getAccessTokenFromSecurityContext();
-        String roles = getRolesFromZitadel(token, "320912215601386953");
-        return ResponseEntity.ok(roles);
-    }
-
-    public String getAccessTokenFromSecurityContext() {
-        BearerTokenAuthentication auth = (BearerTokenAuthentication) SecurityContextHolder.getContext().getAuthentication();
-        return auth.getToken().getTokenValue(); // El token JWT original
-    }
-
-    public String getRolesFromZitadel(String accessToken, String projectId) {
-        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + projectId + "/roles";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-
-        return response.getBody();
-    }
+    @Override
+    public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(Map<String, Object> tokenPayload) {
 
 
-    @PostMapping("/api/DTO-token")
-    public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(@RequestBody Map<String, Object> tokenPayload) {
         ApiResponse<UserDetailsDTO> response = new ApiResponse<>();
 
         try {
@@ -133,11 +67,8 @@ class ExampleController {
         }
     }
 
-
-
-
-    @PostMapping("/token2")
-    public ResponseEntity<?> getToken(@RequestBody Map<String, String> payload) {
+    @Override
+    public ResponseEntity<?> getToken(Map<String, String> payload) {
         try {
             String code = payload.get("code");
             String codeVerifier = payload.get("code_verifier");
@@ -168,11 +99,13 @@ class ExampleController {
         }
     }
 
-    @PostMapping("/userdetails")
-    public ResponseEntity<?> userDetails(@RequestBody Map<String, String> tokenMap) {
+    @Override
+    public ResponseEntity<ApiResponse<UserDetailsDTO>> userDetails(Map<String, String> tokenMap) {
         String token = tokenMap.get("token");
+        UserDetailsDTO userDetails = new UserDetailsDTO();
+
         if (token == null || token.isEmpty()) {
-            return ResponseEntity.badRequest().body("No token provided");
+            return ResponseEntity.ok(new ApiResponse<>(500, "asd", null));
         }
 
         try {
@@ -186,18 +119,67 @@ class ExampleController {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                return ResponseEntity.status(response.statusCode()).body("Error al obtener datos del usuario");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(500, "asd", null));
             }
 
             ObjectMapper objectMapper = new ObjectMapper();
             Map<String, Object> userInfo = objectMapper.readValue(response.body(), new TypeReference<>() {});
 
-            return ResponseEntity.ok(userInfo);
+            Map<?, ?> rolesId = (Map<?, ?>) userInfo.get("urn:zitadel:iam:org:project:roles");
+            List<String> roleNames1 = rolesId.keySet().stream()
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+
+            System.out.println("tokenMap = " + roleNames1);
+
+            List<RoleDTO> roleDTOS = permissionService.obtenerRoles(roleNames1);
+            List<String> permisosDesdeBD = permissionService.obtenerPermisosDesdeRoles(roleNames1);
+
+            userDetails.setUsername(userInfo.get("name").toString());
+            userDetails.setUserId(Long.parseLong(userInfo.get("sub").toString()));
+
+            // Base 64 Encoder Authentication Key
+            userDetails.setBase64EncodedAuthenticationKey("bWlmb3M6cGFzc3dvcmQ");
+            userDetails.setAuthenticated(true);
+            userDetails.setOfficeId(1);
+            userDetails.setOfficeName("office_name");
+            userDetails.setRoles(roleDTOS);
+            userDetails.setPermissions(permisosDesdeBD);
+            userDetails.setShouldRenewPassword(false);
+            userDetails.setTwoFactorAuthenticationRequired(false);
+
+            return ResponseEntity.ok(new ApiResponse<>(200, "ok", userDetails));
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(500, "asd", null));
         }
     }
 
+    @Override
+    public ResponseEntity<String> getProjectRoles() {
+        String token = getAccessTokenFromSecurityContext();
+        String roles = getRolesFromZitadel(token, "320912215601386953");
+        return ResponseEntity.ok(roles);
+    }
+
+    public String getAccessTokenFromSecurityContext() {
+        BearerTokenAuthentication auth = (BearerTokenAuthentication) SecurityContextHolder.getContext().getAuthentication();
+        return auth.getToken().getTokenValue(); // El token JWT original
+    }
+
+    public String getRolesFromZitadel(String accessToken, String projectId) {
+        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + projectId + "/roles";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+        return response.getBody();
+    }
 
 }
