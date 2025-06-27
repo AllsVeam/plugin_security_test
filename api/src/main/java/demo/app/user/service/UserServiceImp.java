@@ -2,7 +2,9 @@ package demo.app.user.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.apiResponse.ApiResponsePass;
 import demo.app.user.roles.RoleGrantRequest;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -19,6 +21,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -265,7 +268,7 @@ public class UserServiceImp implements UserService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final String baseUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
-
+    private final String baseUrlpass = "https://plugin-auth-ofrdfj.us1.zitadel.cloud";
 
     @Override
     public String updateUser(UpdateUserRequest req) {
@@ -312,11 +315,22 @@ public class UserServiceImp implements UserService {
     }
 
     @Override
-    public String updatePass(UpdateUserRequest req){
-        StringBuilder result = new StringBuilder();
-        result.append(postRequest(baseUrl + req.userId + "/password", req.token, req.password));
-        return result.toString();
+    public ResponseEntity<ApiResponsePass> updatePass(Map<String, Object> jsonBody) {
+        String userId = (String) jsonBody.get("userId");
+        String token = (String) jsonBody.get("token");
+
+        if (userId == null || token == null) {
+            ApiResponsePass error = new ApiResponsePass(400, "Faltan campos requeridos: 'userId' o 'token'");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        jsonBody.remove("userId");
+        jsonBody.remove("token");
+
+        String url = baseUrl + userId + "/password";
+        return sendRequest2(url, token, jsonBody, HttpMethod.POST);
     }
+
 
     private String postRequest(String url, String token, Object body) {
         return sendRequest(url, token, body, HttpMethod.POST);
@@ -326,13 +340,42 @@ public class UserServiceImp implements UserService {
         return sendRequest(url, token, body, HttpMethod.PUT);
     }
 
-    private String sendRequest(String url, String token, Object body, HttpMethod method) {
+    private ResponseEntity<ApiResponsePass> sendRequest2(String url, String token, Object body, HttpMethod method) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(token);
 
             HttpEntity<Object> entity = new HttpEntity<>(body, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
+
+            ApiResponsePass success = new ApiResponsePass(response.getStatusCodeValue(), "Operación exitosa");
+            return ResponseEntity.status(response.getStatusCode()).body(success);
+
+        } catch (HttpStatusCodeException e) {
+            ApiResponsePass error = new ApiResponsePass(e.getRawStatusCode(), e.getResponseBodyAsString());
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+        } catch (Exception e) {
+            e.printStackTrace();
+            ApiResponsePass error = new ApiResponsePass(500, "Error interno del servidor: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+
+
+
+
+    private String sendRequest(String url, String token, Object body, HttpMethod method) {
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token);
+            System.out.println(body);
+            HttpEntity<Object> entity = new HttpEntity<>(body, headers);
+
             ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
 
             return "\n[" + method + "] " + url + ": " + response.getStatusCode();

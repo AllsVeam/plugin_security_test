@@ -1,6 +1,7 @@
 package demo.app.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.apiResponse.ApiResponsePass;
 import demo.app.user.roles.RoleGrantRequest;
 import demo.app.user.dto.ResponseZitadelDTO;
 import demo.app.user.dto.UpdateUserRequest;
@@ -64,10 +65,9 @@ public class UserController {
     }
 
     @PutMapping("/update-passUser")
-    public String updatePass(@RequestBody UpdateUserRequest request){
+    public ResponseEntity<ApiResponsePass> updatePass(@RequestBody Map<String, Object> request) {
         return userService.updatePass(request);
     }
-
 
     @PostMapping("/Obtenertoken")
     public String obtenerToken() {
