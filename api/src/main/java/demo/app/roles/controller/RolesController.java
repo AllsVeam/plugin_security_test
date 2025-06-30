@@ -6,6 +6,7 @@ import demo.app.roles.service.RolesService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,6 +22,7 @@ public class RolesController {
     }
 
     @PostMapping("")
+//    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> createRol(@RequestBody RoleRequest data) {
         return rolesService.createRol(data);
     }

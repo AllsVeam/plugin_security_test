@@ -185,7 +185,9 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        String tokenService =  obtenerToken();
+        System.out.println("tokenService = " + tokenService);
+        headers.setBearerAuth(tokenService);
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 

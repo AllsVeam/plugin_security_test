@@ -22,7 +22,7 @@ public class TokenServiceImp implements TokenService {
             HttpClient client = HttpClient.newHttpClient();
             String requestBody = "grant_type=authorization_code"
                     + "&code=" + code
-                    + "&redirect_uri=http://localhost:4200/callback"
+                    + "&redirect_uri=https://vms639pz-4200.usw3.devtunnels.ms/callback"
                     + "&client_id=321191693166683125"
                     + "&grant_type=refresh_token expires_in_refresh_token"
                     + "&code_verifier=" + codeVerifier;
