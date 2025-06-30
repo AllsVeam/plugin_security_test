@@ -2,10 +2,8 @@ package demo.app.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.apiResponse.ApiResponsePass;
+import demo.app.user.dto.*;
 import demo.app.user.roles.RoleGrantRequest;
-import demo.app.user.dto.ResponseZitadelDTO;
-import demo.app.user.dto.UpdateUserRequest;
-import demo.app.user.dto.UserDTO;
 import demo.app.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -95,4 +93,24 @@ public class UserController {
         return userService.assignRolesToUser(data);
     }
 
+    @PutMapping("/update-roles")
+    public ResponseEntity<ApiResponse<Object>> updateRolesToUser(@RequestBody RoleGrantRequest data) {
+        return userService.updateRolesToUser(data);
+    }
+
+    @PutMapping("/update-office")
+    public ResponseEntity<ApiResponse<Object>> updateOfficeAndStaffToUser(@RequestBody OfficeUpdateRequest data) {
+        return userService.updateOfficeAndStaffToUser(data);
+    }
+
+
+    @PostMapping("/CrearBD")
+    public ResponseEntity<ApiResponse<Object>> createUserBD(@RequestBody AppUserRequest request) {
+        return userService.createUserBD(request);
+    }
+
+    @GetMapping("/dataUserBD/{userId}")
+    public ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(@PathVariable String userId) {
+        return userService.getDatosExtraUsuario(userId);
+    }
 }

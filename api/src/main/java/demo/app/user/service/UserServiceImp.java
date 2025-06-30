@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.apiResponse.ApiResponsePass;
+import demo.app.user.repository.AppUserService;
 import demo.app.user.roles.RoleGrantRequest;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,8 +15,11 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.util.LinkedMultiValueMap;
@@ -34,6 +38,10 @@ public class UserServiceImp implements UserService {
     private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
     private static final String ZITADEL_USER = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
+
+
+    @Autowired
+    AppUserService appUserService;
 
     @Value("${zitadel.proyect_id}")
     private String proyectId;
@@ -309,6 +317,8 @@ public class UserServiceImp implements UserService {
                     req.profile.gender
             );
             result.append(putRequest(url, req.token, body));
+            appUserService.actualizarDatosUsuario(req.userId, req.profile.username, req.profile.givenName, req.profile.familyName);
+
         }
 
         return result.toString();
@@ -399,7 +409,7 @@ public class UserServiceImp implements UserService {
                     entity,
                     ResponseZitadelDTO.class
             );
-
+            appUserService.eliminarUsuarioConRoles(userId.toString());
             return ResponseEntity.ok(new ApiResponse<>(200, "Usuario eliminado", response));
         } catch (HttpClientErrorException e){
             return handleZitadelError(e);
@@ -610,10 +620,76 @@ public class UserServiceImp implements UserService {
         }
     }
 
+    @Override
+    public ResponseEntity<ApiResponse<Object>> createUserBD(AppUserRequest request) {
+        try {
 
+            appUserService.insertarAppUserConRoles(
+                    request.getId(),
+                    request.getOfficeId(),
+                    request.getStaffId(),
+                    request.getUsername(),
+                    request.getFirstname(),
+                    request.getLastname(),
+                    request.getRoleIds()
+            );
+            ApiResponse<Object> response = new ApiResponse<>(200, "Usuario creado correctamente", null);
+            return ResponseEntity.ok(response);
 
+        } catch (Exception e) {
+            ApiResponse<Object> response = new ApiResponse<>(500, "Error al crear usuario: " + e.getMessage(), null);
+            return ResponseEntity.status(500).body(response);
+        }
+    }
 
+    @Override
+    public ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(String userId) {
+        try {
 
+            Map<String, Object> datos = appUserService.obtenerDatosUsuarioPorId(userId);
+
+            ApiResponse<Object> response = new ApiResponse<>(200, "Datos extra del usuario obtenidos correctamente", datos);
+            return ResponseEntity.ok(response);
+
+        } catch (EmptyResultDataAccessException e) {
+            ApiResponse<Object> response = new ApiResponse<>(404, "Usuario no encontrado", null);
+            return ResponseEntity.status(404).body(response);
+
+        } catch (Exception e) {
+            ApiResponse<Object> response = new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> updateRolesToUser(RoleGrantRequest data){
+        try {
+            assignRolesToUser(data);
+            appUserService.actualizarRoles(data);
+            ApiResponse<Object> response = new ApiResponse<>(200, "Datos extra del usuario obtenidos correctamente", null);
+            return ResponseEntity.ok(response);
+
+        } catch (EmptyResultDataAccessException e) {
+            ApiResponse<Object> response = new ApiResponse<>(404, "Usuario no encontrado", null);
+            return ResponseEntity.status(404).body(response);
+
+        } catch (Exception e) {
+            ApiResponse<Object> response = new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> updateOfficeAndStaffToUser(OfficeUpdateRequest data) {
+        try {
+            appUserService.actualizarOficinaYStaff(data);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Office y staff actualizados correctamente", null));
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(404, "Usuario no encontrado", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ApiResponse<>(500, "Error interno: " + e.getMessage(), null));
+        }
+    }
 
 
 
