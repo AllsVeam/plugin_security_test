@@ -17,22 +17,25 @@ public class RolesController {
     private RolesService rolesService;
 
     @GetMapping("")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> listRoles() {
         return rolesService.getRoles();
     }
 
     @PostMapping("")
-//    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> createRol(@RequestBody RoleRequest data) {
         return rolesService.createRol(data);
     }
 
     @DeleteMapping("/{roleKey}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> deleteRol(@PathVariable String roleKey) {
         return rolesService.deleteRol(roleKey);
     }
 
     @PutMapping("/{roleKey}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> updateRol(@PathVariable String roleKey, @RequestBody RoleRequest data) {
         return rolesService.updateRol(roleKey, data);
     }

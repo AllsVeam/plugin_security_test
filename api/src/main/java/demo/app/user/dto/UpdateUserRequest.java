@@ -1,5 +1,4 @@
 package demo.app.user.dto;
-// dto/UpdateUserRequest.java
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.Getter;
@@ -11,7 +10,6 @@ import lombok.Setter;
 @Setter
 public class UpdateUserRequest {
     public String userId;
-    public String token;
     public EmailDTO email;
     public PhoneDTO phone;
     public ProfileDTO profile;

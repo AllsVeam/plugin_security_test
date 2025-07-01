@@ -2,6 +2,7 @@ package demo.app.token.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,13 @@ import java.util.Map;
 
 @Service
 public class TokenServiceImp implements TokenService {
+
+    @Value("${spring.security.oauth2.resourceserver.opaquetoken.uri}")
+    private String uri;
+
+    @Value("${zitadel.url_front}")
+    private String url;
+
     @Override
     public ResponseEntity<?> getToken(Map<String, String> payload) {
         try {
@@ -22,13 +30,13 @@ public class TokenServiceImp implements TokenService {
             HttpClient client = HttpClient.newHttpClient();
             String requestBody = "grant_type=authorization_code"
                     + "&code=" + code
-                    + "&redirect_uri=https://vms639pz-4200.usw3.devtunnels.ms/callback"
+                    + "&redirect_uri="+url+"/callback"
                     + "&client_id=321191693166683125"
                     + "&grant_type=refresh_token expires_in_refresh_token"
                     + "&code_verifier=" + codeVerifier;
 
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token"))
+                    .uri(URI.create(uri+"/oauth/v2/token"))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
@@ -38,54 +46,11 @@ public class TokenServiceImp implements TokenService {
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> tokenData = mapper.readValue(response.body(), new TypeReference<>() {});
 
-            return ResponseEntity.ok(tokenData); // Retorna el JSON con access_token, id_token, refresh_token
+            return ResponseEntity.ok(tokenData);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener el token");
         }
     }
 
-
-    /*
-    public ResponseEntity<?> getToken(@RequestBody Map<String, String> payload) {
-        try {
-            String code = payload.get("code");
-            String codeVerifier = payload.get("code_verifier");
-
-            HttpClient client = HttpClient.newHttpClient();
-            String requestBody = "grant_type=authorization_code"
-                    + "&code=" + code
-                    + "&redirect_uri=http://localhost:4200/callback"
-                    + "&client_id=321191693166683125"
-                    + "&code_verifier=" + codeVerifier;
-
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token"))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> tokenData = mapper.readValue(response.body(), new TypeReference<>() {});
-
-            // Solo extrae los campos deseados
-            Map<String, Object> filteredResponse = new HashMap<>();
-            filteredResponse.put("access_token", tokenData.get("access_token"));
-            filteredResponse.put("expires_in", tokenData.get("expires_in"));
-            filteredResponse.put("refresh_token", tokenData.get("refresh_token"));
-            filteredResponse.put("token_type", tokenData.get("token_type"));
-
-            // Campos adicionales que ZITADEL podría no proveer
-            filteredResponse.put("refresh_expires_in", tokenData.getOrDefault("refresh_expires_in", null));
-            filteredResponse.put("session_state", tokenData.getOrDefault("session_state", null));
-            filteredResponse.put("not_before_policy", tokenData.getOrDefault("not_before_policy", null));
-
-            return ResponseEntity.ok(filteredResponse);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener el token");
-        }
-    }*/
 }

@@ -2,7 +2,6 @@ package demo.app.user.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.apiResponse.ApiResponsePass;
 import demo.app.user.repository.AppUserService;
@@ -19,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.*;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.util.LinkedMultiValueMap;
@@ -27,18 +25,17 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class UserServiceImp implements UserService {
-    // https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/
-    private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
-    private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
-    private static final String ZITADEL_USER = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
 
+    @Value("${spring.security.oauth2.resourceserver.opaquetoken.uri}")
+    private String uri;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Autowired
     AppUserService appUserService;
@@ -66,6 +63,7 @@ public class UserServiceImp implements UserService {
 
     @Value("${zitadel.proyect_grand_id}")
     private String projectGrantId;
+
 
     @Override
     public String obtenerToken() {
@@ -97,7 +95,6 @@ public class UserServiceImp implements UserService {
                 throw new RuntimeException("Error al obtener el token: " + response.getStatusCode());
             }
         } catch (HttpClientErrorException e) {
-            System.err.println("Respuesta de error de Zitadel: " + e.getResponseBodyAsString());
             throw new RuntimeException("Error al obtener el token de Zitadel", e);
         } catch (Exception e) {
             throw new RuntimeException("Error inesperado al obtener el token", e);
@@ -108,7 +105,6 @@ public class UserServiceImp implements UserService {
     @Override
     public ResponseEntity<ApiResponse<Object>> createUser(UserDTO dto) {
         try {
-            String token = obtenerToken();
 
             OkHttpClient client = new OkHttpClient();
 
@@ -157,7 +153,7 @@ public class UserServiceImp implements UserService {
             Request request = new Request.Builder()
                     .url(urlUser)
                     .post(body)
-                    .addHeader("Authorization", "Bearer " + token)
+                    .addHeader("Authorization", "Bearer " + obtenerToken())
                     .addHeader("Content-Type", "application/json")
                     .build();
 
@@ -165,11 +161,9 @@ public class UserServiceImp implements UserService {
 
             if (!response.isSuccessful()) {
                 String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
-                System.err.println("Error al crear usuario: " + responseBody);
                 throw new RuntimeException("Error al crear usuario en Zitadel: " + responseBody);
             }
 
-            // Leer y parsear respuesta JSON
             String responseBody = response.body().string();
             Map<String, Object> responseData = mapper.readValue(responseBody, Map.class);
 
@@ -185,15 +179,13 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        String tokenService =  obtenerToken();
-        System.out.println("tokenService = " + tokenService);
-        headers.setBearerAuth(tokenService);
+        headers.setBearerAuth(obtenerToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         try {
             ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
-                    API_URL,
+                    uri+"/management/v1/users/_search",
                     HttpMethod.POST,
                     entity,
                     ResponseZitadelDTO.class
@@ -204,12 +196,10 @@ public class UserServiceImp implements UserService {
             if (responseBody != null && responseBody.getResult() != null) {
                 List<UserZitadelDto> allUsers = responseBody.getResult();
 
-                // Si no se solicitó ID específico, devolver todos los usuarios
                 if (id == null || id.isEmpty()) {
                     return ResponseEntity.ok(new ApiResponse<>(200, "Usuarios obtenidos", responseBody));
                 }
 
-                // Si hay un ID específico, filtrar
                 List<UserZitadelDto> filteredUsers = allUsers.stream()
                         .filter(user -> id.equals(user.getId()))
                         .collect(Collectors.toList());
@@ -227,69 +217,19 @@ public class UserServiceImp implements UserService {
         }
     }
 
-    public UserIdTokenResponse buscarUserIdYToken(String criterio, String valor) {
-        String token = obtenerToken();
-        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token);
-        HttpEntity<String> request = new HttpEntity<>("{}", headers);
-
-        RestTemplate restTemplate = new RestTemplate();
-
-        try {
-            ResponseEntity<Object> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    request,
-                    Object.class
-            );
-
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> root = mapper.convertValue(response.getBody(), new TypeReference<>() {});
-            List<Map<String, Object>> usuarios = (List<Map<String, Object>>) root.get("result");
-
-            for (Map<String, Object> usuario : usuarios) {
-                String userName = (String) usuario.get("userName");
-                Map<String, Object> human = (Map<String, Object>) usuario.get("human");
-
-                if (criterio.equalsIgnoreCase("userName") && userName != null && userName.equalsIgnoreCase(valor)) {
-                    return new UserIdTokenResponse((String) usuario.get("id"), token);
-                }
-
-                if (criterio.equalsIgnoreCase("email") && human != null) {
-                    Map<String, Object> email = (Map<String, Object>) human.get("email");
-                    if (email != null && valor.equalsIgnoreCase((String) email.get("email"))) {
-                        return new UserIdTokenResponse((String) usuario.get("id"), token);
-                    }
-                }
-            }
-
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            System.out.println("Error HTTP: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            System.out.println("Error al procesar la respuesta: " + e.getMessage());
-        }
-
-        return null;
-    }
-
-
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final String baseUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
-    private final String baseUrlpass = "https://plugin-auth-ofrdfj.us1.zitadel.cloud";
 
     @Override
     public String updateUser(UpdateUserRequest req) {
+        String baseUrl = uri + "/v2/users/";
         StringBuilder result = new StringBuilder();
 
         if (req.email != null) {
-            result.append(postRequest(baseUrl + req.userId + "/email", req.token, req.email));
+            result.append(postRequest(baseUrl + req.userId + "/email", obtenerToken(), req.email));
         }
 
         if (req.phone != null) {
-            result.append(postRequest(baseUrl + req.userId + "/phone", req.token, req.phone));
+            result.append(postRequest(baseUrl + req.userId + "/phone", obtenerToken(), req.phone));
         }
 
         if (req.profile != null) {
@@ -318,8 +258,9 @@ public class UserServiceImp implements UserService {
                     req.profile.preferredLanguage,
                     req.profile.gender
             );
-            result.append(putRequest(url, req.token, body));
+            result.append(putRequest(url, obtenerToken(), body));
             appUserService.actualizarDatosUsuario(req.userId, req.profile.username, req.profile.givenName, req.profile.familyName);
+
 
         }
 
@@ -328,8 +269,9 @@ public class UserServiceImp implements UserService {
 
     @Override
     public ResponseEntity<ApiResponsePass> updatePass(Map<String, Object> jsonBody) {
+        String baseUrl = uri + "/v2/users/";
         String userId = (String) jsonBody.get("userId");
-        String token = (String) jsonBody.get("token");
+        String token = obtenerToken();
 
         if (userId == null || token == null) {
             ApiResponsePass error = new ApiResponsePass(400, "Faltan campos requeridos: 'userId' o 'token'");
@@ -375,17 +317,12 @@ public class UserServiceImp implements UserService {
         }
     }
 
-
-
-
-
     private String sendRequest(String url, String token, Object body, HttpMethod method) {
 
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(token);
-            System.out.println(body);
             HttpEntity<Object> entity = new HttpEntity<>(body, headers);
 
             ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
@@ -400,13 +337,13 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<Object>> deleteUser(Long userId) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setBearerAuth(obtenerToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         try {
             ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
-                    ZITADEL_USER + userId,
+                    uri+"/v2/users/" + userId,
                     HttpMethod.DELETE,
                     entity,
                     ResponseZitadelDTO.class
@@ -425,13 +362,13 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<Object>> desactivate(Long userId) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setBearerAuth(obtenerToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         try {
             ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
-                    ZITADEL_USER + userId + "/deactivate",
+                    uri+"/v2/users/" + userId + "/deactivate",
                     HttpMethod.POST,
                     entity,
                     ResponseZitadelDTO.class
@@ -454,13 +391,13 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<Object>> reactivate(Long userId) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setBearerAuth(obtenerToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         try {
             ResponseEntity<ResponseZitadelDTO> response = restTemplate.exchange(
-                    ZITADEL_USER + userId + "/reactivate",
+                    uri+"/v2/users/" + userId + "/reactivate",
                     HttpMethod.POST,
                     entity,
                     ResponseZitadelDTO.class
@@ -483,13 +420,13 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<Object>> getUserById(Long userId) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setBearerAuth(obtenerToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         try {
             ResponseEntity<Object> response = restTemplate.exchange(
-                    ZITADEL_USER + userId, HttpMethod.GET, entity, Object.class
+                    uri+"/v2/users/" + userId, HttpMethod.GET, entity, Object.class
             );
 
             return ResponseEntity.ok(
@@ -509,12 +446,12 @@ public class UserServiceImp implements UserService {
     public ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data) {
 
         String userId = data.getUserId();
-        String urlAssign = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants";
+        String urlAssign = uri+"/management/v1/users/" + userId + "/grants";
 
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        headers.setBearerAuth(obtenerToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
@@ -529,12 +466,10 @@ public class UserServiceImp implements UserService {
 
         } catch (HttpClientErrorException e) {
             String body = e.getResponseBodyAsString();
-            System.out.println("Error HTTP: " + e.getStatusCode());
-            System.out.println("Mensaje: " + body);
 
             if (e.getStatusCode() == HttpStatus.CONFLICT && body.contains("User grant already exists")) {
                 try {
-                    String urlSearch = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/grants/_search";
+                    String urlSearch = uri+"/management/v1/users/grants/_search";
 
                     JSONObject searchPayload = new JSONObject();
                     JSONArray queries = new JSONArray();
@@ -567,7 +502,7 @@ public class UserServiceImp implements UserService {
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(new ApiResponse<>(400, "No se pudo encontrar grant existente para actualizar", null));
                     }
-                    String updateUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/" + userId + "/grants/" + grantIdToUpdate;
+                    String updateUrl = uri+"/management/v1/users/" + userId + "/grants/" + grantIdToUpdate;
 
                     JSONObject updatePayload = new JSONObject();
                     updatePayload.put("projectId", proyectId);
