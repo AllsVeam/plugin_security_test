@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.roles.dto.RoleRequest;
 import demo.app.user.service.UserService;
+import demo.app.user.service.UserServiceImp;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +17,6 @@ import java.util.Map;
 
 @Service
 public class RolesServiceImp implements RolesService {
-    private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
 
     @Autowired
     private UserService userService;
@@ -24,17 +24,19 @@ public class RolesServiceImp implements RolesService {
     @Value("${zitadel.proyect_id}")
     private String proyectId;
 
+    @Value("${spring.security.oauth2.resourceserver.opaquetoken.uri}")
+    private String uri;
+
+
+
     @Override
     public ResponseEntity<ApiResponse<Object>> getRoles() {
         try {
 
-            String token = userService.obtenerToken();
-            System.out.println("token = " + token);
-
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/_search";
+            String url = uri+"/management/v1/projects/" + proyectId + "/roles/_search";
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setBearerAuth(userService.obtenerToken());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             JSONObject json = new JSONObject();
@@ -54,13 +56,15 @@ public class RolesServiceImp implements RolesService {
 
     }
 
+    private UserServiceImp  userServiceImp;
+
     @Override
     public ResponseEntity<ApiResponse<Object>> createRol(RoleRequest data) {
         try {
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles";
+            String url = uri+"/management/v1/projects/" + proyectId + "/roles";
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setBearerAuth(userService.obtenerToken());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             JSONObject json = new JSONObject();
@@ -86,12 +90,12 @@ public class RolesServiceImp implements RolesService {
     @Override
     public ResponseEntity<ApiResponse<Object>> deleteRol(String roleKey) {
         try {
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/" + roleKey;
+            String url = uri+"/management/v1/projects/" + proyectId + "/roles/" + roleKey;
 
             RestTemplate restTemplate = new RestTemplate();
 
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setBearerAuth(userService.obtenerToken());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
@@ -119,11 +123,11 @@ public class RolesServiceImp implements RolesService {
     @Override
     public ResponseEntity<ApiResponse<Object>> updateRol(String roleKey, RoleRequest data) {
         try {
-            String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/" + roleKey;
+            String url = uri+"/management/v1/projects/" + proyectId + "/roles/" + roleKey;
 
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(ZITADEL_TOKEN);
+            headers.setBearerAuth(userService.obtenerToken());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             JSONObject payload = new JSONObject();

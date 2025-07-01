@@ -8,6 +8,7 @@ import demo.app.api.dto.UserDetailsDTO;
 import demo.app.api.repository.PermissionService;
 import demo.app.apiResponse.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
@@ -31,6 +32,12 @@ public class ApiServiceImp implements ApiService {
     @Autowired
     private TokenMapper tokenMapper;
 
+    @Value("${spring.security.oauth2.resourceserver.opaquetoken.uri}")
+    private String uri;
+
+    @Value("${zitadel.url_front}")
+    private String url;
+
     @Override
     public ResponseEntity<ApiResponse<UserDetailsDTO>> mapToken(Map<String, Object> tokenPayload) {
 
@@ -50,7 +57,6 @@ public class ApiServiceImp implements ApiService {
             response.setStatus(200);
             response.setMsg("Full user");
             response.setObject(userDetails);
-            System.out.println("DTO  = " + response);
             return ResponseEntity.ok(response);
 
         } catch (NoRolesAssignedException e) {
@@ -67,6 +73,7 @@ public class ApiServiceImp implements ApiService {
         }
     }
 
+
     @Override
     public ResponseEntity<?> getToken(Map<String, String> payload) {
         try {
@@ -76,13 +83,13 @@ public class ApiServiceImp implements ApiService {
             HttpClient client = HttpClient.newHttpClient();
             String requestBody = "grant_type=authorization_code"
                     + "&code=" + code
-                    + "&redirect_uri=https://vms639pz-4200.usw3.devtunnels.ms/callback"
+                    + "&redirect_uri="+url+"/callback"
                     + "&client_id=321191693166683125"
                     + "&grant_type=refresh_token expires_in_refresh_token"
                     + "&code_verifier=" + codeVerifier;
 
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/token"))
+                    .uri(URI.create(uri+"/oauth/v2/token"))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
@@ -92,7 +99,7 @@ public class ApiServiceImp implements ApiService {
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> tokenData = mapper.readValue(response.body(), new TypeReference<>() {});
 
-            return ResponseEntity.ok(tokenData); // Retorna el JSON con access_token, id_token, refresh_token
+            return ResponseEntity.ok(tokenData);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener el token");
@@ -111,7 +118,7 @@ public class ApiServiceImp implements ApiService {
         try {
             HttpClient client = HttpClient.newHttpClient();
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oidc/v1/userinfo"))
+                    .uri(URI.create(uri+"/oidc/v1/userinfo"))
                     .header("Authorization", "Bearer " + token)
                     .GET()
                     .build();
@@ -130,7 +137,6 @@ public class ApiServiceImp implements ApiService {
                     .map(Object::toString)
                     .collect(Collectors.toList());
 
-            System.out.println("tokenMap = " + roleNames1);
 
             List<RoleDTO> roleDTOS = permissionService.obtenerRoles(roleNames1);
             List<String> permisosDesdeBD = permissionService.obtenerPermisosDesdeRoles(roleNames1);
@@ -138,7 +144,6 @@ public class ApiServiceImp implements ApiService {
             userDetails.setUsername(userInfo.get("name").toString());
             userDetails.setUserId(Long.parseLong(userInfo.get("sub").toString()));
 
-            // Base 64 Encoder Authentication Key
             userDetails.setBase64EncodedAuthenticationKey("bWlmb3M6cGFzc3dvcmQ");
             userDetails.setAuthenticated(true);
             userDetails.setOfficeId(1);
@@ -168,7 +173,7 @@ public class ApiServiceImp implements ApiService {
     }
 
     public String getRolesFromZitadel(String accessToken, String projectId) {
-        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + projectId + "/roles";
+        String url = uri+"/management/v1/projects/" + projectId + "/roles";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);

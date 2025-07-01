@@ -1,5 +1,6 @@
 package demo.app.api.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -15,7 +16,9 @@ import java.util.Map;
 @Service
 public class TokenIntrospectionService {
 
-    private final String introspectionUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect";
+    @Value("${spring.security.oauth2.resourceserver.opaquetoken.uri}")
+    private static String uri;
+    private final String introspectionUrl = uri+"/oauth/v2/introspect";
     private final String clientId = "320912215601386953";
     private final String clientSecret = "SvYVzcVMZ7cUjhlrjicgfez7nxfk66UvxsbNYtmaPzzopn4DnRa3NgDmrfmvOv8J";
 

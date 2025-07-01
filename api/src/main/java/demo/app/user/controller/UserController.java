@@ -30,21 +30,23 @@ public class UserController {
     }
 
     @PostMapping("/crear")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> crearUsuario(@RequestBody UserDTO dto) {
             return userService.createUser(dto);
     }
 
     @GetMapping("/")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getAllUsers() {
         return userService.getUser(null);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public String updateUser(@PathVariable String id, @RequestBody Map<String, Object> payload) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
-            System.out.println("JSON bonito:\n" + json);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -53,63 +55,74 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(@PathVariable String id) {
         return userService.getUser(id);
     }
 
     @PutMapping("/update-user")
+    @PreAuthorize("isAuthenticated()")
     public String updateUser(@RequestBody UpdateUserRequest request) {
         return userService.updateUser(request);
     }
 
     @PutMapping("/update-passUser")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponsePass> updatePass(@RequestBody Map<String, Object> request) {
         return userService.updatePass(request);
     }
 
     @PostMapping("/Obtenertoken")
+    @PreAuthorize("isAuthenticated()")
     public String obtenerToken() {
         return userService.obtenerToken();
     }
 
     @DeleteMapping("/")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> deleteUser(@RequestParam Long userId) {
         return userService.deleteUser(userId);
     }
 
     @PutMapping("/desactivate")
-    //@PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> desactivateUser(@RequestParam Long userId) {
         return userService.desactivate(userId);
     }
 
     @PutMapping("/reactivate")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> reactivateUser(@RequestParam Long userId) {
         return userService.reactivate(userId);
     }
 
     @PostMapping("/assign-roles")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> assignRolesToUser(@RequestBody RoleGrantRequest data) {
         return userService.assignRolesToUser(data);
     }
 
     @PutMapping("/update-roles")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> updateRolesToUser(@RequestBody RoleGrantRequest data) {
         return userService.updateRolesToUser(data);
     }
 
     @PutMapping("/update-office")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> updateOfficeAndStaffToUser(@RequestBody OfficeUpdateRequest data) {
         return userService.updateOfficeAndStaffToUser(data);
     }
 
 
     @PostMapping("/CrearBD")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> createUserBD(@RequestBody AppUserRequest request) {
         return userService.createUserBD(request);
     }
 
     @GetMapping("/dataUserBD/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(@PathVariable String userId) {
         return userService.getDatosExtraUsuario(userId);
     }

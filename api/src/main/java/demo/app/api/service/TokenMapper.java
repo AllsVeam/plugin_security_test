@@ -5,6 +5,7 @@ import demo.app.api.dto.RoleDTO;
 import demo.app.api.dto.UserDetailsDTO;
 import demo.app.api.repository.PermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -21,6 +22,9 @@ public class TokenMapper {
     @Autowired
     private PermissionService permissionService;
 
+    @Value("${spring.security.oauth2.resourceserver.opaquetoken.uri}")
+    private String uri;
+
     public UserDetailsDTO mapTokenToUserDetails(Map<String, Object> tokenMap) {
         UserDetailsDTO userDetails = new UserDetailsDTO();
         List<String> permisos = new ArrayList<>();
@@ -30,7 +34,7 @@ public class TokenMapper {
             try {
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest userInfoRequest = HttpRequest.newBuilder()
-                        .uri(URI.create("https://plugin-auth-ofrdfj.us1.zitadel.cloud/oidc/v1/userinfo"))
+                        .uri(URI.create(uri+"/oidc/v1/userinfo"))
                         .header("Authorization", "Bearer " + accessToken)
                         .GET()
                         .build();
@@ -56,8 +60,6 @@ public class TokenMapper {
 
                     permisos.addAll(permisosDesdeBD);
                     Set<String> permisosUnicos = new HashSet<>(permisos);
-
-                    //permisos.add("TWOFACTOR_AUTHENTICATED");
 
                     userDetails.setAccessToken(accessToken);
                     userDetails.setAuthenticated(true);

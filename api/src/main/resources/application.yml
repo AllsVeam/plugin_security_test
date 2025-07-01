@@ -17,6 +17,7 @@ spring:
       resourceserver:
         opaquetoken:
           introspection-uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud/oauth/v2/introspect'
+          uri: 'https://plugin-auth-ofrdfj.us1.zitadel.cloud'
           client-id: '320912215601386953'
           client-secret: 'Oi6WQvgYw5XwfACyH3DQWi0jkF47mzS7ZUFy83uODqrQEDAK0wXr41vSDxPT0OTu'
   datasource:
@@ -34,6 +35,7 @@ logging:
         web: info
         security: debug
 zitadel:
+  url_front: 'https://3kmbjvc5-4200.usw3.devtunnels.ms'
   client_id: "Asistente"
   client_secret: "klug5LQYdGAHJuGPa5wFfQMN2d0fvjyAo6Q4hQJQctgcXS4q50qqolWHb54eUE1R"
   scope: "openid profile email urn:zitadel:iam:org:project:id:zitadel:aud"

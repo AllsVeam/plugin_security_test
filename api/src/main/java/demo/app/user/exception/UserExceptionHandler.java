@@ -13,7 +13,6 @@ public class UserExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
-        System.out.println("Se esta mandando la excepcion");
         ApiResponse<Object> response = new ApiResponse<>();
         response.setStatus(400);
 

@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
         private String userId;
         private String username;
 
-        // profile
         private String givenName;
         private String familyName;
         private String nickName;
@@ -21,17 +20,13 @@ import lombok.NoArgsConstructor;
         private String preferredLanguage;
         private String gender;
 
-        // email
         private String email;
 
-        // phone
         private String phone;
 
-        // password
         private String password;
         private boolean changeRequired;
 
-        // idpLink
         private String idpId;
 
     public String getOrganizationId() {
@@ -173,7 +168,6 @@ import lombok.NoArgsConstructor;
     private String externalUserId;
         private String externalUserName;
 
-        // totp
         private String totpSecret;
     }
 
