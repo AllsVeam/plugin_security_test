@@ -2,7 +2,10 @@ package demo.app.user.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.apiResponse.ApiResponsePass;
+import demo.app.user.repository.AppUserService;
 import demo.app.user.roles.RoleGrantRequest;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -12,13 +15,17 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -26,11 +33,15 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class ZitadelServiceImp implements ZitadelService {
+public class UserServiceImp implements UserService {
     // https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/
     private static final String API_URL = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/users/_search";
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
     private static final String ZITADEL_USER = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
+
+
+    @Autowired
+    AppUserService appUserService;
 
     @Value("${zitadel.proyect_id}")
     private String proyectId;
@@ -174,7 +185,9 @@ public class ZitadelServiceImp implements ZitadelService {
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(ZITADEL_TOKEN);
+        String tokenService =  obtenerToken();
+        System.out.println("tokenService = " + tokenService);
+        headers.setBearerAuth(tokenService);
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -265,7 +278,7 @@ public class ZitadelServiceImp implements ZitadelService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final String baseUrl = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/users/";
-
+    private final String baseUrlpass = "https://plugin-auth-ofrdfj.us1.zitadel.cloud";
 
     @Override
     public String updateUser(UpdateUserRequest req) {
@@ -274,25 +287,29 @@ public class ZitadelServiceImp implements ZitadelService {
         if (req.email != null) {
             result.append(postRequest(baseUrl + req.userId + "/email", req.token, req.email));
         }
+
         if (req.phone != null) {
             result.append(postRequest(baseUrl + req.userId + "/phone", req.token, req.phone));
         }
+
         if (req.profile != null) {
-            // Construir cuerpo de actualización de perfil
             String url = baseUrl + "human/" + req.userId;
+
             String body = """
-                {
-                  "username": "%s",
-                  "profile": {
-                    "givenName": "%s",
-                    "familyName": "%s",
-                    "displayName": "%s",
-                    "nickName": "%s",
-                    "preferredLanguage": "%s",
-                    "gender": "%s"
-                  }
-                }
-                """.formatted(
+            {
+              "userId": "%s",
+              "username": "%s",
+              "profile": {
+                "givenName": "%s",
+                "familyName": "%s",
+                "displayName": "%s",
+                "nickName": "%s",
+                "preferredLanguage": "%s",
+                "gender": "%s"
+              }
+            }
+            """.formatted(
+                    req.userId,
                     req.profile.username,
                     req.profile.givenName,
                     req.profile.familyName,
@@ -302,13 +319,31 @@ public class ZitadelServiceImp implements ZitadelService {
                     req.profile.gender
             );
             result.append(putRequest(url, req.token, body));
-        }
-        if (req.password != null) {
-            result.append(postRequest(baseUrl + req.userId + "/password", req.token, req.password));
+            appUserService.actualizarDatosUsuario(req.userId, req.profile.username, req.profile.givenName, req.profile.familyName);
+
         }
 
         return result.toString();
     }
+
+    @Override
+    public ResponseEntity<ApiResponsePass> updatePass(Map<String, Object> jsonBody) {
+        String userId = (String) jsonBody.get("userId");
+        String token = (String) jsonBody.get("token");
+
+        if (userId == null || token == null) {
+            ApiResponsePass error = new ApiResponsePass(400, "Faltan campos requeridos: 'userId' o 'token'");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        jsonBody.remove("userId");
+        jsonBody.remove("token");
+
+        String url = baseUrl + userId + "/password";
+        return sendRequest2(url, token, jsonBody, HttpMethod.POST);
+    }
+
+
     private String postRequest(String url, String token, Object body) {
         return sendRequest(url, token, body, HttpMethod.POST);
     }
@@ -317,13 +352,42 @@ public class ZitadelServiceImp implements ZitadelService {
         return sendRequest(url, token, body, HttpMethod.PUT);
     }
 
-    private String sendRequest(String url, String token, Object body, HttpMethod method) {
+    private ResponseEntity<ApiResponsePass> sendRequest2(String url, String token, Object body, HttpMethod method) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(token);
 
             HttpEntity<Object> entity = new HttpEntity<>(body, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
+
+            ApiResponsePass success = new ApiResponsePass(response.getStatusCodeValue(), "Operación exitosa");
+            return ResponseEntity.status(response.getStatusCode()).body(success);
+
+        } catch (HttpStatusCodeException e) {
+            ApiResponsePass error = new ApiResponsePass(e.getRawStatusCode(), e.getResponseBodyAsString());
+            return ResponseEntity.status(e.getStatusCode()).body(error);
+        } catch (Exception e) {
+            e.printStackTrace();
+            ApiResponsePass error = new ApiResponsePass(500, "Error interno del servidor: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+
+
+
+
+    private String sendRequest(String url, String token, Object body, HttpMethod method) {
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token);
+            System.out.println(body);
+            HttpEntity<Object> entity = new HttpEntity<>(body, headers);
+
             ResponseEntity<String> response = restTemplate.exchange(url, method, entity, String.class);
 
             return "\n[" + method + "] " + url + ": " + response.getStatusCode();
@@ -347,7 +411,7 @@ public class ZitadelServiceImp implements ZitadelService {
                     entity,
                     ResponseZitadelDTO.class
             );
-
+            appUserService.eliminarUsuarioConRoles(userId.toString());
             return ResponseEntity.ok(new ApiResponse<>(200, "Usuario eliminado", response));
         } catch (HttpClientErrorException e){
             return handleZitadelError(e);
@@ -559,129 +623,84 @@ public class ZitadelServiceImp implements ZitadelService {
     }
 
     @Override
-    public List<Map<String, Object>> getAllSessions() {
-        String token = obtenerToken();
-        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/sessions/search";
-
+    public ResponseEntity<ApiResponse<Object>> createUserBD(AppUserRequest request) {
         try {
-            OkHttpClient client = new OkHttpClient().newBuilder().build();
 
-            String jsonBody = """
-        {
-          "query": {
-            "offset": 0,
-            "limit": 100,
-            "asc": false
-          },
-          "queries": [],
-          "sortingColumn": "SESSION_FIELD_NAME_UNSPECIFIED"
-        }
-        """;
-
-            RequestBody body = RequestBody.create(
-                    jsonBody,
-                    okhttp3.MediaType.parse("application/json")
+            appUserService.insertarAppUserConRoles(
+                    request.getId(),
+                    request.getOfficeId(),
+                    request.getStaffId(),
+                    request.getUsername(),
+                    request.getFirstname(),
+                    request.getLastname(),
+                    request.getRoleIds()
             );
-
-            Request request = new Request.Builder()
-                    .url(url)
-                    .method("POST", body)
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Accept", "application/json")
-                    .addHeader("Authorization", "Bearer " + token)
-                    .build();
-
-            Response response = client.newCall(request).execute();
-
-            if (!response.isSuccessful()) {
-                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
-                log.error("Error al consultar sesiones: {}", responseBody);
-                throw new RuntimeException("Error al consultar sesiones: " + responseBody);
-            }
-
-            String responseBody = response.body().string();
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> responseMap = mapper.readValue(responseBody, new TypeReference<>() {});
-            List<Map<String, Object>> sesiones = (List<Map<String, Object>>) responseMap.get("sessions");
-
-            for (Map<String, Object> sesion : sesiones) {
-                Map<String, Object> userAgent = (Map<String, Object>) sesion.get("userAgent");
-                sesion.put("deviceInfo", userAgent != null ? userAgent.get("raw") : null);
-                sesion.put("fingerprintId", userAgent != null ? userAgent.get("fingerprintId") : null);
-                sesion.put("ip", sesion.get("ipAddress"));
-                sesion.put("localizacion", sesion.get("location"));
-            }
-
-            return sesiones;
+            ApiResponse<Object> response = new ApiResponse<>(200, "Usuario creado correctamente", null);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Excepción al obtener sesiones: {}", e.getMessage());
-            return Collections.emptyList();
+            ApiResponse<Object> response = new ApiResponse<>(500, "Error al crear usuario: " + e.getMessage(), null);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     @Override
-    public List<Map<String, Object>> getSessionsByUserId(String userId) {
-        String token = obtenerToken();
-        String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/v2/sessions/search";
-
+    public ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(String userId) {
         try {
-            OkHttpClient client = new OkHttpClient().newBuilder().build();
 
-            String jsonBody = """
-        {
-          "query": {
-            "offset": 0,
-            "limit": 100,
-            "asc": false
-          },
-          "queries": [
-            {
-              "userIdQuery": {
-                "id": "%s"
-              }
-            }
-          ],
-          "sortingColumn": "SESSION_FIELD_NAME_UNSPECIFIED"
-        }
-        """.formatted(userId);
+            Map<String, Object> datos = appUserService.obtenerDatosUsuarioPorId(userId);
 
-            RequestBody body = RequestBody.create(jsonBody, okhttp3.MediaType.parse("application/json"));
+            ApiResponse<Object> response = new ApiResponse<>(200, "Datos extra del usuario obtenidos correctamente", datos);
+            return ResponseEntity.ok(response);
 
-            Request request = new Request.Builder()
-                    .url(url)
-                    .method("POST", body)
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Accept", "application/json")
-                    .addHeader("Authorization", "Bearer " + token)
-                    .build();
-
-            Response response = client.newCall(request).execute();
-
-            if (!response.isSuccessful()) {
-                String responseBody = response.body() != null ? response.body().string() : "Sin cuerpo";
-                log.error("Error al consultar sesiones por userId: {}", responseBody);
-                throw new RuntimeException("Error al consultar sesiones: " + responseBody);
-            }
-
-            String responseBody = response.body().string();
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> responseMap = mapper.readValue(responseBody, new TypeReference<>() {});
-            List<Map<String, Object>> sesiones = (List<Map<String, Object>>) responseMap.get("sessions");
-
-            for (Map<String, Object> sesion : sesiones) {
-                Map<String, Object> userAgent = (Map<String, Object>) sesion.get("userAgent");
-                sesion.put("deviceInfo", userAgent != null ? userAgent.get("raw") : null);
-                sesion.put("fingerprintId", userAgent != null ? userAgent.get("fingerprintId") : null);
-                sesion.put("ip", sesion.get("ipAddress"));
-                sesion.put("localizacion", sesion.get("location"));
-            }
-
-            return sesiones;
+        } catch (EmptyResultDataAccessException e) {
+            ApiResponse<Object> response = new ApiResponse<>(404, "Usuario no encontrado", null);
+            return ResponseEntity.status(404).body(response);
 
         } catch (Exception e) {
-            log.error("Excepción al obtener sesiones por userId: {}", e.getMessage());
-            return Collections.emptyList();
+            ApiResponse<Object> response = new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return ResponseEntity.status(500).body(response);
         }
     }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> updateRolesToUser(RoleGrantRequest data){
+        try {
+            assignRolesToUser(data);
+            appUserService.actualizarRoles(data);
+            ApiResponse<Object> response = new ApiResponse<>(200, "Datos extra del usuario obtenidos correctamente", null);
+            return ResponseEntity.ok(response);
+
+        } catch (EmptyResultDataAccessException e) {
+            ApiResponse<Object> response = new ApiResponse<>(404, "Usuario no encontrado", null);
+            return ResponseEntity.status(404).body(response);
+
+        } catch (Exception e) {
+            ApiResponse<Object> response = new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Object>> updateOfficeAndStaffToUser(OfficeUpdateRequest data) {
+        try {
+            appUserService.actualizarOficinaYStaff(data);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Office y staff actualizados correctamente", null));
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(404, "Usuario no encontrado", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ApiResponse<>(500, "Error interno: " + e.getMessage(), null));
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
 }

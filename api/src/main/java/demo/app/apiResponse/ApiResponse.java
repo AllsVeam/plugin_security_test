@@ -7,10 +7,6 @@ public class ApiResponse<T> {
     private int status;
     private String msg;
     private T object;
-    private boolean success;
-    private String message;
-    private T data;
-
 
     public ApiResponse() {}
 

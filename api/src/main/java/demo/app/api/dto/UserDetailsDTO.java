@@ -10,6 +10,7 @@ public class UserDetailsDTO {
 
     private String username;
     private Long userId;
+    private String base64EncodedAuthenticationKey;
     private String accessToken;
     private boolean authenticated;
     private int officeId;
@@ -33,6 +34,14 @@ public class UserDetailsDTO {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getBase64EncodedAuthenticationKey() {
+        return base64EncodedAuthenticationKey;
+    }
+
+    public void setBase64EncodedAuthenticationKey(String base64EncodedAuthenticationKey) {
+        this.base64EncodedAuthenticationKey = base64EncodedAuthenticationKey;
     }
 
     public String getAccessToken() {

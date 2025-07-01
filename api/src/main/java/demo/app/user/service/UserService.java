@@ -2,25 +2,26 @@ package demo.app.user.service;
 
 
 import demo.app.apiResponse.ApiResponse;
+import demo.app.apiResponse.ApiResponsePass;
+import demo.app.user.dto.*;
 import demo.app.user.roles.RoleGrantRequest;
-import demo.app.user.dto.ResponseZitadelDTO;
-import demo.app.user.dto.UpdateUserRequest;
-import demo.app.user.dto.UserDTO;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
 import java.util.Map;
 
-public interface ZitadelService{
+public interface UserService {
     ResponseEntity<ApiResponse<Object>> createUser(UserDTO userDTO);
     ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(String id);
     String obtenerToken();
     String updateUser(UpdateUserRequest request);
+    ResponseEntity<ApiResponsePass> updatePass(Map<String, Object> jsonBody);
     ResponseEntity<ApiResponse<Object>> deleteUser(Long userId);
     ResponseEntity<ApiResponse<Object>> desactivate(Long userId);
     ResponseEntity<ApiResponse<Object>> reactivate(Long userId);
     ResponseEntity<ApiResponse<Object>> getUserById(Long userId);
     ResponseEntity<ApiResponse<Object>> assignRolesToUser(RoleGrantRequest data);
-    List<Map<String, Object>> getAllSessions();
-    List<Map<String, Object>> getSessionsByUserId(String userId);
+    ResponseEntity<ApiResponse<Object>> updateRolesToUser(RoleGrantRequest data);
+    ResponseEntity<ApiResponse<Object>> createUserBD(AppUserRequest request);
+    ResponseEntity<ApiResponse<Object>> updateOfficeAndStaffToUser(OfficeUpdateRequest data);
+    ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(String userId);
 }

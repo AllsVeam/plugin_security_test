@@ -1,32 +1,27 @@
 package demo.app.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
+import demo.app.apiResponse.ApiResponsePass;
+import demo.app.user.dto.*;
 import demo.app.user.roles.RoleGrantRequest;
-import demo.app.user.dto.ResponseZitadelDTO;
-import demo.app.user.dto.UpdateUserRequest;
-import demo.app.user.dto.UserDTO;
-import demo.app.user.service.ZitadelService;
+import demo.app.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/user")
 public class UserController {
 
-    private final ZitadelService userService;
+    private final UserService userService;
 
     @Autowired
-    public UserController(ZitadelService userService) {
+    public UserController(UserService userService) {
         this.userService = userService;
     }
-
-    @Autowired
-    public ZitadelService zitadelService;
 
     @GetMapping("/hello")
     @PreAuthorize("isAuthenticated()")
@@ -36,12 +31,12 @@ public class UserController {
 
     @PostMapping("/crear")
     public ResponseEntity<ApiResponse<Object>> crearUsuario(@RequestBody UserDTO dto) {
-            return zitadelService.createUser(dto);
+            return userService.createUser(dto);
     }
 
     @GetMapping("/")
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getAllUsers() {
-        return zitadelService.getUser(null);
+        return userService.getUser(null);
     }
 
     @PutMapping("/{id}")
@@ -59,85 +54,63 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ResponseZitadelDTO>> getUser(@PathVariable String id) {
-        return zitadelService.getUser(id);
+        return userService.getUser(id);
     }
 
     @PutMapping("/update-user")
     public String updateUser(@RequestBody UpdateUserRequest request) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            System.out.println("JSON bonito:\n" + json);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return zitadelService.updateUser(request);
+        return userService.updateUser(request);
     }
 
+    @PutMapping("/update-passUser")
+    public ResponseEntity<ApiResponsePass> updatePass(@RequestBody Map<String, Object> request) {
+        return userService.updatePass(request);
+    }
 
     @PostMapping("/Obtenertoken")
     public String obtenerToken() {
-        return zitadelService.obtenerToken();
+        return userService.obtenerToken();
     }
 
     @DeleteMapping("/")
     public ResponseEntity<ApiResponse<Object>> deleteUser(@RequestParam Long userId) {
-        return zitadelService.deleteUser(userId);
+        return userService.deleteUser(userId);
     }
 
     @PutMapping("/desactivate")
     //@PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Object>> desactivateUser(@RequestParam Long userId) {
-        return zitadelService.desactivate(userId);
+        return userService.desactivate(userId);
     }
 
     @PutMapping("/reactivate")
     public ResponseEntity<ApiResponse<Object>> reactivateUser(@RequestParam Long userId) {
-        return zitadelService.reactivate(userId);
+        return userService.reactivate(userId);
     }
 
     @PostMapping("/assign-roles")
     public ResponseEntity<ApiResponse<Object>> assignRolesToUser(@RequestBody RoleGrantRequest data) {
-        return zitadelService.assignRolesToUser(data);
+        return userService.assignRolesToUser(data);
     }
 
-    @PostMapping("/sessions")
-    public ResponseEntity<ApiResponse<Object>> buscarTodasLasSesiones() {
-        try {
-            List<Map<String, Object>> sesiones = zitadelService.getAllSessions();
-
-            ApiResponse<Object> response = new ApiResponse<>();
-            response.setSuccess(true);
-            response.setMessage("Sesiones recuperadas correctamente");
-            response.setData(sesiones);
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            ApiResponse<Object> error = new ApiResponse<>();
-            error.setSuccess(false);
-            error.setMessage("Error al obtener sesiones: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
-        }
+    @PutMapping("/update-roles")
+    public ResponseEntity<ApiResponse<Object>> updateRolesToUser(@RequestBody RoleGrantRequest data) {
+        return userService.updateRolesToUser(data);
     }
 
-    @PostMapping("/sessions/by-user")
-    public ResponseEntity<ApiResponse<Object>> buscarSesionesPorUsuario(@RequestParam String userId) {
-        try {
-            List<Map<String, Object>> sesiones = zitadelService.getSessionsByUserId(userId);
+    @PutMapping("/update-office")
+    public ResponseEntity<ApiResponse<Object>> updateOfficeAndStaffToUser(@RequestBody OfficeUpdateRequest data) {
+        return userService.updateOfficeAndStaffToUser(data);
+    }
 
-            ApiResponse<Object> response = new ApiResponse<>();
-            response.setSuccess(true);
-            response.setMessage("Sesiones del usuario recuperadas correctamente");
-            response.setData(sesiones);
 
-            return ResponseEntity.ok(response);
+    @PostMapping("/CrearBD")
+    public ResponseEntity<ApiResponse<Object>> createUserBD(@RequestBody AppUserRequest request) {
+        return userService.createUserBD(request);
+    }
 
-        } catch (Exception e) {
-            ApiResponse<Object> error = new ApiResponse<>();
-            error.setSuccess(false);
-            error.setMessage("Error al obtener sesiones por usuario: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
-        }
+    @GetMapping("/dataUserBD/{userId}")
+    public ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(@PathVariable String userId) {
+        return userService.getDatosExtraUsuario(userId);
     }
 }

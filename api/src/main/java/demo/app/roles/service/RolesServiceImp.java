@@ -3,7 +3,9 @@ package demo.app.roles.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import demo.app.apiResponse.ApiResponse;
 import demo.app.roles.dto.RoleRequest;
+import demo.app.user.service.UserService;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -16,12 +18,19 @@ import java.util.Map;
 public class RolesServiceImp implements RolesService {
     private static final String ZITADEL_TOKEN = "bGH1RVY7gwgFydzrRTgyWfDhcoxYs8oiG-aEWapojTUa83Qw_6TEoux346VcdoVzO3VprpA";
 
+    @Autowired
+    private UserService userService;
+
     @Value("${zitadel.proyect_id}")
     private String proyectId;
 
     @Override
     public ResponseEntity<ApiResponse<Object>> getRoles() {
         try {
+
+            String token = userService.obtenerToken();
+            System.out.println("token = " + token);
+
             String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles/_search";
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
@@ -48,8 +57,6 @@ public class RolesServiceImp implements RolesService {
     @Override
     public ResponseEntity<ApiResponse<Object>> createRol(RoleRequest data) {
         try {
-            String roleKey = data.getRoleKey();
-
             String url = "https://plugin-auth-ofrdfj.us1.zitadel.cloud/management/v1/projects/" + proyectId + "/roles";
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
