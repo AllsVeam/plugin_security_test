@@ -32,7 +32,7 @@ git clone https://github.com/your-org/fineract-security-plugin.git
 cd fineract-security-plugin
 ```
 
-### 2. (Optional) Manually install Fineract `.jar` files into the local Maven repository
+### 2. Manually install Fineract `.jar` files into the local Maven repository
 
 > Only if the plugin directly depends on Fineract classes and you're not using a remote repository.
 
@@ -85,7 +85,7 @@ java -Dloader.path=/home/user/plugins/libs/ \
 You can test the plugin's features by calling a custom endpoint or reviewing changes in the existing security logic. For example:
 
 ```bash
-curl --location --request GET 'http://localhost:8443/fineract-provider/test' \
+curl -k --location --request GET 'https://localhost:8443/fineract-provider/auth/test' \
 --header 'Fineract-Platform-TenantId: default'
 ```
 
