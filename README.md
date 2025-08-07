@@ -1,76 +1,117 @@
-## ZITADEL Example Project with Spring Boot and Spring Security
+#  Mifos® Security Plugin for Apache Fineract®
 
-This example contains two Spring Boot Apps (_api_ and _app_) which use the [ZITADEL](https://zitadel.com/) SaaS identity provider as OpenID Provider.
+This plugin extends Apache Fineract® functionality by adding additional security controls, external authentication, custom validations, and more.
 
-- The app _web_ uses the internal OAuth2 access token (opaque token) provided by ZITADEL to access the _api_.
-- The _api_ acts as an OAuth2 resource server.
+---
 
-# Features
+##  For Users
 
-- OpenID Connect based Login
-- Logout support via OpenID Connect end session endpoint
-- Access Token Relay
-- Opaque Reference Tokens and Token Introspection
+### 1. Clone or download Apache Fineract®
 
-# Applications
-
-To run the example you need to configure the applications in ZITADEL and provide the generated properties.
-Please check out the full guides ([web](https://zitadel.com/docs/examples/login/java-spring) and [api](https://zitadel.com/docs/examples/secure-api/java-spring)) on this example as well.
-
-## API
-
-The Spring Boot app _api_ is configured as an API in ZITADEL and uses the Spring Security Resource Server support.
-
-Base URL: http://localhost:18090
-
-## Web
-
-The Spring Boot app _web_ is configured as confidential Web App and OpenID Connect client in ZITADEL and uses the Spring Security OAuth2 client library
-for authentication.
-
-Base URL: `http://localhost:18080/webapp`
-
-Redirect URI:
-```
-http://localhost:18080/webapp/login/oauth2/code/zitadel
-```
-
-Post Logout URL:
-```
-http://localhost:18080/webapp
-```
-
-# Build
-
-```
-mvn clean package -DskipTests
-```
-
-# Run
-
-The _api_ application requires the following JVM Properties to be configured:
 ```bash
-# Run the api application in one terminal
-java \
-  -Dspring.security.oauth2.resourceserver.opaquetoken.introspection-uri=<see configuration above> \
-  -Dspring.security.oauth2.resourceserver.opaquetoken.client-id=<see configuration above> \
-  -Dspring.security.oauth2.resourceserver.opaquetoken.client-secret=<see configuration above> \
-  -jar api/target/api-0.0.2-SNAPSHOT.jar
+git clone https://github.com/apache/fineract.git
+cd fineract
 ```
 
-The _web_ application requires the following JVM Properties to be configured:
+### 2. Generate the Fineract `.jar`
+
 ```bash
-# Run the web application in another terminal
-java \
-  -Dspring.security.oauth2.client.provider.zitadel.issuer-uri=<see configuration above> \
-  -Dspring.security.oauth2.client.registration.zitadel.client-id=<see configuration above> \
-  -jar web/target/web-0.0.2-SNAPSHOT.jar
+./gradlew bootJar
 ```
 
-Open your browser and navigate to http://localhost:18080/webapp/
+This will generate the `fineract-provider-<version>.jar` file in `fineract-provider/build/libs/`.
 
-# Misc
+---
 
-- This example uses opaque reference tokens as access tokens
-- For the sake of simplicity CSRF protection and https are disabled
-- Note in order to allow `http://` URIs we need to enable the `development mode in the respective client configuration.
+##  Installing the Security Plugin
+
+### 1. Clone the plugin repository
+
+```bash
+git clone https://github.com/your-org/fineract-security-plugin.git
+cd fineract-security-plugin
+```
+
+### 2. (Optional) Manually install Fineract `.jar` files into the local Maven repository
+
+> Only if the plugin directly depends on Fineract classes and you're not using a remote repository.
+
+```bash
+mvn install:install-file \
+  -Dfile=/path/to/fineract/fineract-provider/build/libs/fineract-provider-1.13.1-SNAPSHOT.jar \
+  -DgroupId=org.apache.fineract \
+  -DartifactId=fineract-provider \
+  -Dversion=1.13.1-SNAPSHOT \
+  -Dpackaging=jar
+
+mvn install:install-file \
+  -Dfile=/path/to/fineract/fineract-core/build/libs/fineract-core-1.13.1-SNAPSHOT.jar \
+  -DgroupId=org.apache.fineract \
+  -DartifactId=fineract-core \
+  -Dversion=1.13.1-SNAPSHOT \
+  -Dpackaging=jar
+```
+
+>  Make sure to adjust the paths and versions according to your environment.
+
+### 3. Build the security plugin using Maven
+
+```bash
+mvn clean install
+```
+
+This will generate the plugin `.jar` inside the `target/` directory, along with its dependencies in the `libs/` folder (if configured that way).
+
+---
+
+##  Running the Plugin with Apache Fineract®
+
+1. Make sure the plugin `.jar` and its dependencies are placed in a directory (e.g., `/home/user/plugins/libs/`).
+
+2. Run Apache Fineract® while dynamically loading the plugin:
+
+```bash
+java -Dloader.path=/home/user/plugins/libs/ \
+     -jar /path/to/fineract/fineract-provider/build/libs/fineract-provider-1.13.1-SNAPSHOT.jar \
+     --debug
+```
+
+>  If everything is correctly set up, the logs should indicate that the plugin was successfully loaded and registered.
+
+---
+
+##  Verification
+
+You can test the plugin's features by calling a custom endpoint or reviewing changes in the existing security logic. For example:
+
+```bash
+curl --location --request GET 'http://localhost:8443/fineract-provider/test' \
+--header 'Fineract-Platform-TenantId: default'
+```
+
+---
+
+##  Requirements
+
+* Apache Fineract® 1.13.1+
+* Java 11 or later
+* Maven 3.6+
+* Gradle 7+ (to build Fineract)
+* Ubuntu 20.04/22.04/24.04 (recommended)
+
+---
+
+##  License
+
+This project is licensed under the [Mozilla Public License 2.0 (MPL)](https://www.mozilla.org/en-US/MPL/2.0/).
+
+---
+
+##  Contributions
+
+Contributions are welcome! You can:
+
+* Submit a pull request with improvements or fixes
+* Report bugs and suggestions via the Issues section
+* Share the plugin with other developers in the Fineract® ecosystem
+
