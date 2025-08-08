@@ -52,11 +52,12 @@ public class ZitadelSecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())))
+
+                // 🔽 Agrega tu filtro personalizado antes del UsernamePasswordAuthenticationFilter
                 .addFilterBefore(tenantInitializationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 
 
     @Bean

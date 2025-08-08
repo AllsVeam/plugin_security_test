@@ -1,6 +1,6 @@
 org/apache/fineract/plugins/zitadel/security/api/dto/UserDTO.class
-org/apache/fineract/plugins/zitadel/security/api/dto/UpdateUserRequest.class
 org/apache/fineract/plugins/zitadel/security/api/dto/RoleDTO.class
+org/apache/fineract/plugins/zitadel/security/api/dto/UpdateUserRequest.class
 org/apache/fineract/plugins/zitadel/security/api/dto/HumanZitadelDto.class
 org/apache/fineract/plugins/zitadel/security/api/response/ApiResponsePass.class
 org/apache/fineract/plugins/zitadel/security/api/dto/RoleGrantRequest.class
@@ -15,11 +15,11 @@ org/apache/fineract/plugins/zitadel/security/api/dto/EmailZitadelDto.class
 org/apache/fineract/plugins/zitadel/security/api/dto/PhoneZitadelDto.class
 org/apache/fineract/plugins/zitadel/security/config/SecurityConfigDebugger.class
 org/apache/fineract/plugins/zitadel/security/api/dto/UserZitadelDto.class
-org/apache/fineract/plugins/zitadel/security/service/ApiServiceImp$2.class
 org/apache/fineract/plugins/zitadel/security/api/dto/ProfileDTO.class
+org/apache/fineract/plugins/zitadel/security/service/ApiServiceImp$2.class
 org/apache/fineract/plugins/zitadel/security/service/ApiService.class
-org/apache/fineract/plugins/zitadel/security/api/GlobalExceptionHandler.class
 org/apache/fineract/plugins/zitadel/security/api/exception/UserExceptionHandler$ErrorCodeResponse.class
+org/apache/fineract/plugins/zitadel/security/api/GlobalExceptionHandler.class
 org/apache/fineract/plugins/zitadel/security/api/service/TokenIntrospectionService.class
 org/apache/fineract/plugins/zitadel/security/api/dto/UpdateUserRequest$Password.class
 org/apache/fineract/plugins/zitadel/security/api/response/ApiResponse.class
@@ -27,8 +27,8 @@ org/apache/fineract/plugins/zitadel/security/api/dto/PasswordDTO.class
 org/apache/fineract/plugins/zitadel/security/api/dto/ProfileZitadelDto.class
 org/apache/fineract/plugins/zitadel/security/api/dto/OfficeUpdateRequest.class
 org/apache/fineract/plugins/zitadel/security/service/ApiServiceImp$1.class
-org/apache/fineract/plugins/zitadel/security/api/dto/UserIdRequest.class
 org/apache/fineract/plugins/zitadel/security/api/dto/RoleRequest.class
+org/apache/fineract/plugins/zitadel/security/api/dto/UserIdRequest.class
 org/apache/fineract/plugins/zitadel/security/api/dto/ResponseZitadelDTO.class
 org/apache/fineract/plugins/zitadel/security/api/repository/PermissionService.class
 org/apache/fineract/plugins/zitadel/security/ZitadelTokenValidator.class

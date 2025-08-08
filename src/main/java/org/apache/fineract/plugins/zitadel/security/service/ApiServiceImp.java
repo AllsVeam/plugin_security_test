@@ -765,8 +765,12 @@ public class ApiServiceImp implements ApiService{
     public ResponseEntity<ApiResponse<Object>> getDatosExtraUsuario(String userId) {
         try {
 
-            Map<String, Object> datos = appUserService.obtenerDatosUsuarioPorId(userId);
+            if (ThreadLocalContextUtil.getTenant() == null) {
+                FineractPlatformTenant tenant = tenantDetailsService.loadTenantById("default"); // o el tenant que uses
+                ThreadLocalContextUtil.setTenant(tenant);
+            }
 
+            Map<String, Object> datos = appUserService.obtenerDatosUsuarioPorId(userId);
             ApiResponse<Object> response = new ApiResponse<>(200, "Datos extra del usuario obtenidos correctamente", datos);
             return ResponseEntity.ok(response);
 
